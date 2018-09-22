@@ -4,21 +4,17 @@ import "./index.css";
 
 const el = document.getElementById("root");
 
-const BEGIN = "BEGIN";
-const TURN = "TURN";
-const OVER = "OVER";
+// States
+const BEGIN = Symbol();
+const TURN = Symbol();
+const OVER = Symbol();
 
-const LEFT = "ArrowLeft";
-const RIGHT = "ArrowRight";
-const SHIFT_LEFT = "ShiftArrowLeft";
-const SHIFT_RIGHT = "ShiftArrowRight";
-const ENTER = "Enter";
-
-const GO_LEFT = "goleft";
-const GO_RIGHT = "goright";
-const GO_FIRST = "gofirst";
-const GO_LAST = "golast";
-const NEXT_STATE = "nextstate";
+// Transitions
+const GO_LEFT = Symbol();
+const GO_RIGHT = Symbol();
+const GO_FIRST = Symbol();
+const GO_LAST = Symbol();
+const NEXT_TURN = Symbol();
 
 const initialState = (currentState = BEGIN) => ({
   currentPlayer: 0,
@@ -53,14 +49,6 @@ const nextState = state => {
   }
 };
 
-const withCurrentPlayer = (state, fn) => {
-  state.game.players = state.game.players.map((player, i) => {
-    if (i === state.currentPlayer) return fn(state, player);
-    return player;
-  });
-  return state;
-};
-
 const goRight = (state, player) =>
   player.station < state.game.lastStation
     ? { ...player, station: player.station + 1 }
@@ -81,9 +69,20 @@ const goLast = (state, player) => ({
   station: state.game.lastStation
 });
 
+const winner = state =>
+  state.game.players.find(player => player.station === state.game.lastStation);
+
+const withCurrentPlayer = (state, fn) => {
+  state.game.players = state.game.players.map((player, i) => {
+    if (i === state.currentPlayer) return fn(state, player);
+    return player;
+  });
+  return state;
+};
+
 const reduce = (state, action) => {
   switch (action) {
-    case NEXT_STATE:
+    case NEXT_TURN:
       return nextState(state);
     case GO_LEFT:
       return withCurrentPlayer(state, goLeft);
@@ -98,11 +97,6 @@ const reduce = (state, action) => {
   }
 };
 
-const winner = state => {
-  return state.game.players.find(
-    player => player.station === state.game.lastStation
-  );
-};
 class KeyboardController extends React.Component {
   constructor(props) {
     super(props);
@@ -118,29 +112,36 @@ class KeyboardController extends React.Component {
   }
 
   handleKeydown({ shiftKey, key }) {
-    const actualKey = shiftKey ? `Shift${key}` : key;
-    const { onAction } = this.props;
-    switch (actualKey) {
-      case LEFT:
-        onAction(GO_LEFT);
+    const { onLeft, onRight, onShiftLeft, onShiftRight, onEnter } = this.props;
+    switch (shiftKey ? `Shift${key}` : key) {
+      case "ArrowLeft":
+        onLeft();
         break;
-      case RIGHT:
-        onAction(GO_RIGHT);
+      case "ArrowRight":
+        onRight();
         break;
-      case SHIFT_LEFT:
-        onAction(GO_FIRST);
+      case "ShiftArrowLeft":
+        onShiftLeft();
         break;
-      case SHIFT_RIGHT:
-        onAction(GO_LAST);
+      case "ShiftArrowRight":
+        onShiftRight();
         break;
-      case ENTER:
-        onAction(NEXT_STATE);
+      case "Enter":
+        onEnter();
         break;
       default:
     }
   }
 
   render() {
+    const withCurrentPlayer = (state, fn) => {
+      state.game.players = state.game.players.map((player, i) => {
+        if (i === state.currentPlayer) return fn(state, player);
+        return player;
+      });
+      return state;
+    };
+
     const { children } = this.props;
     return <React.Fragment>{children}</React.Fragment>;
   }
@@ -158,19 +159,21 @@ const makePlayer = currentPlayer => (props, i) => (
 );
 
 const update = state => {
-  const step = action => update(reduce(state, action));
-  const next = () => step(NEXT_STATE);
-  const first = () => step(GO_FIRST);
-  const left = () => step(GO_LEFT);
-  const right = () => step(GO_RIGHT);
-  const last = () => step(GO_LAST);
+  const transition = action => update(reduce(state, action));
+  const next = () => transition(NEXT_TURN);
+  const first = () => transition(GO_FIRST);
+  const left = () => transition(GO_LEFT);
+  const right = () => transition(GO_RIGHT);
+  const last = () => transition(GO_LAST);
 
   const uiFromState = () => {
     switch (state.currentState) {
       case BEGIN:
         return (
           <React.Fragment>
-            <button onClick={next}>BEGIN</button>
+            <button className="control control-large" onClick={next}>
+              BEGIN
+            </button>
             <p className="small-print">(or hit ENTER to begin)</p>
           </React.Fragment>
         );
@@ -208,7 +211,14 @@ const update = state => {
         return (
           <React.Fragment>
             <p>Game Over! {winner(state).name} won the game.</p>
-            <button onClick={next}>PLAY AGAIN</button>
+            <div>
+              <button className="control control-large" onClick={next}>
+                PLAY AGAIN
+              </button>
+              <button className="control control-large" onClick={next}>
+                NEW GAME
+              </button>
+            </div>
             <p className="small-print">(or hit ENTER to play again)</p>
           </React.Fragment>
         );
@@ -216,8 +226,17 @@ const update = state => {
         return null;
     }
   };
+
   ReactDOM.render(
-    <KeyboardController onAction={step}>{uiFromState()}</KeyboardController>,
+    <KeyboardController
+      onLeft={left}
+      onRight={right}
+      onShiftLeft={first}
+      onShiftRight={last}
+      onEnter={next}
+    >
+      {uiFromState()}
+    </KeyboardController>,
     el
   );
 };

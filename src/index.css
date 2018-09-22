@@ -3,6 +3,10 @@
   padding: 2px;
 }
 
+.control.control-large {
+  width: 88px;
+}
+
 .small-print {
   font-style: italic;
   font-size: 0.8em;
