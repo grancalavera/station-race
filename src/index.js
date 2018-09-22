@@ -27,7 +27,9 @@ const initialState = (currentState = BEGIN) => ({
     lastStation: 3,
     players: [
       { name: "Player 1", station: 0 },
-      { name: "Player 2", station: 0 }
+      { name: "Player 2", station: 0 },
+      { name: "Player 3", station: 0 },
+      { name: "Player 4", station: 0 }
     ]
   }
 });
@@ -37,6 +39,7 @@ class KeyboardController extends React.Component {
     super(props);
     this.handleKeydown = this.handleKeydown.bind(this);
   }
+
   componentDidMount() {
     document.addEventListener("keydown", this.handleKeydown);
   }
@@ -76,8 +79,8 @@ class KeyboardController extends React.Component {
 
 const Player = ({ name, station, isCurrentPlayer }) => (
   <div>
-    {isCurrentPlayer ? <code>[X]</code> : <code>[ ]</code>} {name} is at station{" "}
-    {station}
+    <code>[{isCurrentPlayer ? "X" : " "}]</code>
+    {name} is at station {station}
   </div>
 );
 
@@ -94,7 +97,7 @@ const nextState = state => {
         ? { ...state, currentState: OVER }
         : {
             ...state,
-            currentPlayer: (state.currentPlayer + 1) % 2
+            currentPlayer: (state.currentPlayer + 1) % state.game.players.length
           };
     case OVER:
       return { ...initialState(TURN) };
@@ -111,27 +114,25 @@ const withCurrentPlayer = (state, fn) => {
   return state;
 };
 
-const goRight = (state, player) => {
-  if (player.station >= state.game.lastStation) return player;
-  player.station = player.station + 1;
-  return player;
-};
+const goRight = (state, player) =>
+  player.station < state.game.lastStation
+    ? { ...player, station: player.station + 1 }
+    : player;
 
-const goLeft = (state, player) => {
-  if (player.station <= state.game.firstStation) return player;
-  player.station = player.station - 1;
-  return player;
-};
+const goLeft = (state, player) =>
+  player.station > state.game.firstStation
+    ? { ...player, station: player.station - 1 }
+    : player;
 
-const goFirst = (state, player) => {
-  player.station = state.game.firstStation;
-  return player;
-};
+const goFirst = (state, player) => ({
+  ...player,
+  station: state.game.firstStation
+});
 
-const goLast = (state, player) => {
-  player.station = state.game.lastStation;
-  return player;
-};
+const goLast = (state, player) => ({
+  ...player,
+  station: state.game.lastStation
+});
 
 const reduce = (state, action) => {
   switch (action) {
