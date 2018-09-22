@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
+import "./index.css";
 
 const el = document.getElementById("root");
 
@@ -33,60 +34,6 @@ const initialState = (currentState = BEGIN) => ({
     ]
   }
 });
-
-class KeyboardController extends React.Component {
-  constructor(props) {
-    super(props);
-    this.handleKeydown = this.handleKeydown.bind(this);
-  }
-
-  componentDidMount() {
-    document.addEventListener("keydown", this.handleKeydown);
-  }
-
-  componentWillUnmount() {
-    document.removeEventListener("keydown", this.handleKeydown);
-  }
-
-  handleKeydown({ shiftKey, key }) {
-    const actualKey = shiftKey ? `Shift${key}` : key;
-    const { onAction } = this.props;
-    switch (actualKey) {
-      case LEFT:
-        onAction(GO_LEFT);
-        break;
-      case RIGHT:
-        onAction(GO_RIGHT);
-        break;
-      case SHIFT_LEFT:
-        onAction(GO_FIRST);
-        break;
-      case SHIFT_RIGHT:
-        onAction(GO_LAST);
-        break;
-      case ENTER:
-        onAction(NEXT_STATE);
-        break;
-      default:
-    }
-  }
-
-  render() {
-    const { children } = this.props;
-    return <React.Fragment>{children}</React.Fragment>;
-  }
-}
-
-const Player = ({ name, station, isCurrentPlayer }) => (
-  <div>
-    <code>[{isCurrentPlayer ? "X" : " "}]</code>
-    {name} is at station {station}
-  </div>
-);
-
-const makePlayer = currentPlayer => (props, i) => (
-  <Player key={i} {...props} isCurrentPlayer={currentPlayer === i} />
-);
 
 const nextState = state => {
   switch (state.currentState) {
@@ -156,48 +103,121 @@ const winner = state => {
     player => player.station === state.game.lastStation
   );
 };
-
-const uiFromState = state => {
-  switch (state.currentState) {
-    case BEGIN:
-      return <p>Hit ENTER to begin</p>;
-    case TURN:
-      return (
-        <React.Fragment>
-          {state.game.players.map(makePlayer(state.currentPlayer))}
-          <ul
-            style={{
-              fontStyle: "italic",
-              fontSize: "0.8em"
-            }}
-          >
-            <li>LeftArrow: go to previous station</li>
-            <li>RightArrow: go to next station</li>
-            <li>Shift+LeftArrow: go to first station</li>
-            <li>Shift+RightArrow: go to last station</li>
-            <li>Enter: end your turn</li>
-          </ul>
-        </React.Fragment>
-      );
-
-    case OVER:
-      return (
-        <div>
-          <p>Game Over! {winner(state).name} won the game.</p>
-          <p>Hit ENTER to play again</p>
-        </div>
-      );
-    default:
-      return null;
+class KeyboardController extends React.Component {
+  constructor(props) {
+    super(props);
+    this.handleKeydown = this.handleKeydown.bind(this);
   }
-};
+
+  componentDidMount() {
+    document.addEventListener("keydown", this.handleKeydown);
+  }
+
+  componentWillUnmount() {
+    document.removeEventListener("keydown", this.handleKeydown);
+  }
+
+  handleKeydown({ shiftKey, key }) {
+    const actualKey = shiftKey ? `Shift${key}` : key;
+    const { onAction } = this.props;
+    switch (actualKey) {
+      case LEFT:
+        onAction(GO_LEFT);
+        break;
+      case RIGHT:
+        onAction(GO_RIGHT);
+        break;
+      case SHIFT_LEFT:
+        onAction(GO_FIRST);
+        break;
+      case SHIFT_RIGHT:
+        onAction(GO_LAST);
+        break;
+      case ENTER:
+        onAction(NEXT_STATE);
+        break;
+      default:
+    }
+  }
+
+  render() {
+    const { children } = this.props;
+    return <React.Fragment>{children}</React.Fragment>;
+  }
+}
+
+const Player = ({ name, station, isCurrentPlayer }) => (
+  <div>
+    <code>[{isCurrentPlayer ? "X" : " "}]</code>
+    {name} is at station {station}
+  </div>
+);
+
+const makePlayer = currentPlayer => (props, i) => (
+  <Player key={i} {...props} isCurrentPlayer={currentPlayer === i} />
+);
 
 const update = state => {
   const step = action => update(reduce(state, action));
+  const next = () => step(NEXT_STATE);
+  const first = () => step(GO_FIRST);
+  const left = () => step(GO_LEFT);
+  const right = () => step(GO_RIGHT);
+  const last = () => step(GO_LAST);
+
+  const uiFromState = () => {
+    switch (state.currentState) {
+      case BEGIN:
+        return (
+          <React.Fragment>
+            <button onClick={next}>BEGIN</button>
+            <p className="small-print">(or hit ENTER to begin)</p>
+          </React.Fragment>
+        );
+      case TURN:
+        return (
+          <React.Fragment>
+            {state.game.players.map(makePlayer(state.currentPlayer))}
+            <div>
+              <button onClick={first} className="control">
+                {"<<"}
+              </button>
+              <button onClick={left} className="control">
+                {"<"}
+              </button>
+              <button onClick={right} className="control">
+                {">"}
+              </button>
+              <button onClick={last} className="control">
+                {">>"}
+              </button>
+              <button onClick={next} className="control submit">
+                DONE
+              </button>
+            </div>
+            <ul className="small-print">
+              <li>LeftArrow: go to previous station</li>
+              <li>RightArrow: go to next station</li>
+              <li>Shift+LeftArrow: go to first station</li>
+              <li>Shift+RightArrow: go to last station</li>
+              <li>Enter: end your turn</li>
+            </ul>
+          </React.Fragment>
+        );
+      case OVER:
+        return (
+          <React.Fragment>
+            <p>Game Over! {winner(state).name} won the game.</p>
+            <button onClick={next}>PLAY AGAIN</button>
+            <p className="small-print">(or hit ENTER to play again)</p>
+          </React.Fragment>
+        );
+      default:
+        return null;
+    }
+  };
   ReactDOM.render(
-    <KeyboardController onAction={step}>
-      {uiFromState(state)}
-    </KeyboardController>,
+    <KeyboardController onAction={step}>{uiFromState()}</KeyboardController>,
     el
   );
 };

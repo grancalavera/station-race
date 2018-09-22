@@ -1,0 +1,9 @@
+.control {
+  width: 44px;
+  padding: 2px;
+}
+
+.small-print {
+  font-style: italic;
+  font-size: 0.8em;
+}
