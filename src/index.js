@@ -49,9 +49,10 @@ const BEGIN_AGAIN = Symbol("BEGIN_AGAIN");
 
 const updatePlayers = (state, { i, name }) => {
   const invalidName = /^\s*$/.test(name);
-  const players = invalidName
-    ? { ...state.players, [i]: null }
-    : { ...state.players, [i]: { name, station: 0 } };
+  const players = {
+    ...state.players,
+    [i]: invalidName ? null : { name, station: 0 }
+  };
   const playerCount = Object.values(players).filter(Boolean).length;
   return { ...state, players, playerCount };
 };
