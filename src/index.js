@@ -4,6 +4,13 @@ import "./index.css";
 
 const el = document.getElementById("root");
 
+// https://stackoverflow.com/questions/6122571/simple-non-secure-hash-function-for-javascript
+const hashCode = string =>
+  string.split("").reduce((hash, char) => {
+    hash = (hash << 5) - hash + char.charCodeAt(0);
+    return hash & hash;
+  }, 0);
+
 // States
 const BEGIN = Symbol("BEGIN");
 const SETUP = Symbol("SETUP");
@@ -25,7 +32,12 @@ const initialGame = () => ({
   maxPlayers: 4,
   firstStation: 0,
   lastStation: 3,
-  players: []
+  players: [
+    { name: "Player 1", station: 0 }
+    // { name: "Player 2", station: 0 },
+    // { name: "Player 3", station: 0 },
+    // { name: "Player 4", station: 0 }
+  ]
 });
 
 const newGame = state => ({
@@ -148,14 +160,6 @@ class KeyboardController extends React.Component {
   }
 
   render() {
-    const withCurrentPlayer = (state, fn) => {
-      state.players = state.players.map((player, i) => {
-        if (i === state.currentPlayer) return fn(state, player);
-        return player;
-      });
-      return state;
-    };
-
     const { children } = this.props;
     return <React.Fragment>{children}</React.Fragment>;
   }
@@ -167,6 +171,97 @@ const Player = ({ name, station, isCurrentPlayer }) => (
     {name} is at station {station}
   </div>
 );
+
+class PlayerEditor extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      name: props.defaultName
+    };
+    this.onNameChange = this.onNameChange.bind(this);
+    this.onRevertName = this.onRevertName.bind(this);
+  }
+
+  onNameChange(e) {
+    e.preventDefault();
+    const name = e.target.value;
+    this.setState({ name });
+  }
+
+  onRevertName(e) {
+    e.preventDefault();
+    const { defaultName } = this.props;
+    this.setState({ name: defaultName });
+  }
+
+  render() {
+    const { name } = this.state;
+    const { defaultName, i } = this.props;
+    const isDirty = name !== defaultName;
+    const disabled = !isDirty;
+    return (
+      <div className="editor">
+        {i + 1}:{" "}
+        <input
+          placeholder="player name"
+          value={name}
+          onChange={this.onNameChange}
+        />
+        <button className="control control-large" disabled={disabled}>
+          SAVE
+        </button>
+        {isDirty ? (
+          <button
+            className="control control-large"
+            disabled={disabled}
+            onClick={this.onRevertName}
+          >
+            REVERT
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+}
+
+class GameSetup extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      focusIndex: 0
+    };
+  }
+  render() {
+    const { minPlayers, maxPlayers, players } = this.props;
+    return (
+      <React.Fragment>
+        <p>
+          Add at least {minPlayers} players to start the game.
+          <br />
+          You can add up to {maxPlayers} players.
+        </p>
+
+        {players.map(({ name }, i) => (
+          <PlayerEditor key={hashCode(name)} defaultName={name} i={i} />
+        ))}
+
+        {players.length < maxPlayers ? (
+          <PlayerEditor i={players.length} />
+        ) : null}
+        <ul className="small-print">
+          <li>Enter: add player.</li>
+          {players.length >= minPlayers ? (
+            <li>Shift+Enter: start game.</li>
+          ) : null}
+        </ul>
+      </React.Fragment>
+    );
+  }
+}
+
+PlayerEditor.defaultProps = {
+  defaultName: ""
+};
 
 const makePlayer = currentPlayer => (props, i) => (
   <Player key={i} {...props} isCurrentPlayer={currentPlayer === i} />
@@ -211,28 +306,7 @@ const update = state => {
           </React.Fragment>
         );
       case SETUP:
-        // if there are less players than maxPlayers
-        // then add a new blank editor
-        // otherwise just don't
-        return (
-          <React.Fragment>
-            <p>Add at least {state.minPlayers} players to start the game.</p>
-            <div className="editor">
-              <input type="text" />
-              <button>ADD</button>
-            </div>
-            <div>
-              <input type="text" />
-              <button>ADD</button>
-            </div>
-            <ul className="small-print">
-              <li>Enter: add player.</li>
-              {state.players.length >= state.minPlayers ? (
-                <li>Shift+Enter: start game.</li>
-              ) : null}
-            </ul>
-          </React.Fragment>
-        );
+        return <GameSetup {...state} />;
       case TURN:
         return (
           <React.Fragment>
