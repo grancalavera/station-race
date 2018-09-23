@@ -91,11 +91,12 @@ const goLast = (state, player) => ({
 });
 
 const withCurrentPlayer = (state, fn) => {
-  state.players = state.players.map((player, i) => {
-    if (i === state.currentPlayer) return fn(state, player);
-    return player;
-  });
-  return state;
+  return {
+    ...state,
+    players: state.players.map(
+      (player, i) => (i === state.currentPlayer ? fn(state, player) : player)
+    )
+  };
 };
 
 const playAgain = state => {
@@ -324,7 +325,7 @@ const update = state => {
               <button className="control control-large" onClick={again}>
                 PLAY AGAIN
               </button>
-              <button className="control control-large" onClick={begin}>
+              <button className="control control-large" onClick={beginAgain}>
                 NEW GAME
               </button>
             </div>
