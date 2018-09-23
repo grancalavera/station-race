@@ -4,18 +4,33 @@ import "./index.css";
 
 const el = document.getElementById("root");
 
-// https://stackoverflow.com/questions/6122571/simple-non-secure-hash-function-for-javascript
-const hashCode = string =>
-  string.split("").reduce((hash, char) => {
-    hash = (hash << 5) - hash + char.charCodeAt(0);
-    return hash & hash;
-  }, 0);
-
-// States
+// State tags
 const BEGIN = Symbol("BEGIN");
 const SETUP = Symbol("SETUP");
 const TURN = Symbol("TURN");
 const OVER = Symbol("OVER");
+
+// State making functions
+const makeBeginState = () => ({ state: BEGIN });
+
+const makeSetupState = (minPlayers, maxPlayers) => ({
+  state: SETUP,
+  minPlayers,
+  maxPlayers,
+  players: [...Array(maxPlayers)].reduce((ps, i) => ({ ...ps, [i]: null }), {})
+});
+
+const makeTurnState = players => ({
+  currentPlayer: 0,
+  firstStation: 1,
+  lastStation: 3,
+  players: Object.values(players).filter(Boolean)
+});
+
+const makeOverState = winner => ({
+  state: OVER,
+  winner
+});
 
 // Transitions
 const GO_LEFT = Symbol("GO_LEFT");
@@ -25,26 +40,43 @@ const GO_LAST = Symbol("GO_LAST");
 const NEXT_TURN = Symbol("NEXT_TURN");
 const NEW_GAME = Symbol("NEW_GAME");
 const PLAY_AGAIN = Symbol("PLAY_AGAIN");
+const UPDATE_PLAYER = Symbol("UPDATE_PLAYER");
 
-const initialGame = () => ({
+const initialGame = (minPlayers, maxPlayers) => ({
   currentPlayer: 0,
-  minPlayers: 2,
-  maxPlayers: 4,
+  minPlayers,
+  maxPlayers,
   firstStation: 0,
   lastStation: 3,
+  playerSetup: [
+    ...Array(maxPlayers).reduce((setup, i) => ({ [i]: { station: 0 } }))
+  ],
+  // playerSetup: {
+  //   "0": { station: 0 },
+  //   "1": { station: 0 },
+  //   "2": { station: 0 },
+  //   "3": { station: 0 }
+  // },
   players: [
-    { name: "Player 1", station: 0 }
-    // { name: "Player 2", station: 0 },
+    { name: "Player 1", station: 0 },
+    { name: "Player 2", station: 0 }
     // { name: "Player 3", station: 0 },
-    // { name: "Player 4", station: 0 }
+    // { name: "Player 4", station: 0 },
   ]
 });
 
 const newGame = state => ({
   ...state,
-  ...initialGame(),
+  ...initialGame(2, 4),
   currentState: SETUP
 });
+
+const updatePlayer = (state, { i, name }) => {
+  const maybePlayer = state.players[i];
+  const player = maybePlayer ? { ...maybePlayer, name } : { name, station: 0 };
+  state.players[i] = player;
+  return state;
+};
 
 const playAgain = state => ({
   ...state,
@@ -91,10 +123,12 @@ const nextTurn = state =>
     ? { ...state, currentState: OVER }
     : { ...state, currentPlayer: nextPlayer(state) };
 
-const reduce = (state, action) => {
-  switch (action) {
+const reduce = (state, { type, payload }) => {
+  switch (type) {
     case NEW_GAME:
       return newGame(state);
+    case UPDATE_PLAYER:
+      return updatePlayer(state, payload);
     case PLAY_AGAIN:
       return playAgain(state);
     case NEXT_TURN:
@@ -172,103 +206,13 @@ const Player = ({ name, station, isCurrentPlayer }) => (
   </div>
 );
 
-class PlayerEditor extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      name: props.defaultName
-    };
-    this.onNameChange = this.onNameChange.bind(this);
-    this.onRevertName = this.onRevertName.bind(this);
-  }
-
-  onNameChange(e) {
-    e.preventDefault();
-    const name = e.target.value;
-    this.setState({ name });
-  }
-
-  onRevertName(e) {
-    e.preventDefault();
-    const { defaultName } = this.props;
-    this.setState({ name: defaultName });
-  }
-
-  render() {
-    const { name } = this.state;
-    const { defaultName, i } = this.props;
-    const isDirty = name !== defaultName;
-    const disabled = !isDirty;
-    return (
-      <div className="editor">
-        {i + 1}:{" "}
-        <input
-          placeholder="player name"
-          value={name}
-          onChange={this.onNameChange}
-        />
-        <button className="control control-large" disabled={disabled}>
-          SAVE
-        </button>
-        {isDirty ? (
-          <button
-            className="control control-large"
-            disabled={disabled}
-            onClick={this.onRevertName}
-          >
-            REVERT
-          </button>
-        ) : null}
-      </div>
-    );
-  }
-}
-
-class GameSetup extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      focusIndex: 0
-    };
-  }
-  render() {
-    const { minPlayers, maxPlayers, players } = this.props;
-    return (
-      <React.Fragment>
-        <p>
-          Add at least {minPlayers} players to start the game.
-          <br />
-          You can add up to {maxPlayers} players.
-        </p>
-
-        {players.map(({ name }, i) => (
-          <PlayerEditor key={hashCode(name)} defaultName={name} i={i} />
-        ))}
-
-        {players.length < maxPlayers ? (
-          <PlayerEditor i={players.length} />
-        ) : null}
-        <ul className="small-print">
-          <li>Enter: add player.</li>
-          {players.length >= minPlayers ? (
-            <li>Shift+Enter: start game.</li>
-          ) : null}
-        </ul>
-      </React.Fragment>
-    );
-  }
-}
-
-PlayerEditor.defaultProps = {
-  defaultName: ""
-};
-
 const makePlayer = currentPlayer => (props, i) => (
   <Player key={i} {...props} isCurrentPlayer={currentPlayer === i} />
 );
 
 const update = state => {
-  const transition = action => update(reduce(state, action));
+  const transition = (type, payload) =>
+    update(reduce(state, { type, payload }));
 
   const begin = () => transition(NEW_GAME);
   const again = () => transition(PLAY_AGAIN);
@@ -277,6 +221,8 @@ const update = state => {
   const right = () => transition(GO_RIGHT);
   const first = () => transition(GO_FIRST);
   const last = () => transition(GO_LAST);
+  const updatePlayer = i => e =>
+    transition(UPDATE_PLAYER, { i, name: e.target.value });
 
   const resolveOnEnter = () => {
     switch (state.currentState) {
@@ -306,7 +252,32 @@ const update = state => {
           </React.Fragment>
         );
       case SETUP:
-        return <GameSetup {...state} />;
+        return (
+          <React.Fragment>
+            <p>
+              Add at least {state.minPlayers} players to start the game.
+              <br />
+              You can add up to {state.maxPlayers} players.
+            </p>
+
+            {[...Array(state.maxPlayers)].map((_, i) => (
+              <div key={i} className="editor">
+                {i + 1}:{" "}
+                <input
+                  value={state.players[i] ? state.players[i].name : ""}
+                  onChange={updatePlayer(i)}
+                />{" "}
+              </div>
+            ))}
+
+            <ul className="small-print">
+              {state.players.length >= state.minPlayers ? (
+                <li>Shift+Enter: start game.</li>
+              ) : null}
+            </ul>
+          </React.Fragment>
+        );
+
       case TURN:
         return (
           <React.Fragment>
