@@ -1,3 +1,7 @@
+.control-bar {
+  margin-top: 1em;
+}
+
 .control {
   width: 44px;
   padding: 2px;
@@ -8,6 +12,24 @@
 }
 
 .small-print {
+  border-top: 1px solid black;
+  padding-top: 1em;
   font-style: italic;
   font-size: 0.8em;
+}
+
+.error {
+  color: red;
+  border: 2px solid red;
+  padding: 1em;
+  font-weight: bold;
+  background-color: lightpink;
+}
+
+.editor {
+  margin-bottom: 0.5em;
+}
+
+input {
+  margin-right: 0.5em;
 }

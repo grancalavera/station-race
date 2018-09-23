@@ -6,34 +6,32 @@ const el = document.getElementById("root");
 
 // States
 const BEGIN = Symbol("BEGIN");
+const SETUP = Symbol("SETUP");
 const TURN = Symbol("TURN");
 const OVER = Symbol("OVER");
 
 // Transitions
-const GO_LEFT = Symbol();
-const GO_RIGHT = Symbol();
-const GO_FIRST = Symbol();
-const GO_LAST = Symbol();
-const NEXT_TURN = Symbol();
-const NEW_GAME = Symbol();
-const PLAY_AGAIN = Symbol();
+const GO_LEFT = Symbol("GO_LEFT");
+const GO_RIGHT = Symbol("GO_RIGHT");
+const GO_FIRST = Symbol("GO_FIRST");
+const GO_LAST = Symbol("GO_LAST");
+const NEXT_TURN = Symbol("NEXT_TURN");
+const NEW_GAME = Symbol("NEW_GAME");
+const PLAY_AGAIN = Symbol("PLAY_AGAIN");
 
 const initialGame = () => ({
   currentPlayer: 0,
+  minPlayers: 2,
+  maxPlayers: 4,
   firstStation: 0,
   lastStation: 3,
-  players: [
-    { name: "Player 1", station: 0 },
-    { name: "Player 2", station: 0 },
-    { name: "Player 3", station: 0 },
-    { name: "Player 4", station: 0 }
-  ]
+  players: []
 });
 
 const newGame = state => ({
   ...state,
   ...initialGame(),
-  currentState: TURN
+  currentState: SETUP
 });
 
 const playAgain = state => ({
@@ -117,7 +115,15 @@ class KeyboardController extends React.Component {
   }
 
   handleKeydown({ shiftKey, key }) {
-    const { onLeft, onRight, onShiftLeft, onShiftRight, onEnter } = this.props;
+    const {
+      onLeft,
+      onRight,
+      onShiftLeft,
+      onShiftRight,
+      onEnter,
+      onShiftEnter
+    } = this.props;
+
     switch (shiftKey ? `Shift${key}` : key) {
       case "ArrowLeft":
         onLeft();
@@ -133,6 +139,9 @@ class KeyboardController extends React.Component {
         break;
       case "Enter":
         onEnter();
+        break;
+      case "ShiftEnter":
+        onShiftEnter();
         break;
       default:
     }
@@ -190,17 +199,45 @@ const update = state => {
       case BEGIN:
         return (
           <React.Fragment>
+            <p>
+              If you can make sense of this game you're half way to winning.
+            </p>
             <button className="control control-large" onClick={begin}>
               BEGIN
             </button>
-            <p className="small-print">(or hit ENTER to begin)</p>
+            <ul className="small-print">
+              <li>Enter: begin the game.</li>
+            </ul>
+          </React.Fragment>
+        );
+      case SETUP:
+        // if there are less players than maxPlayers
+        // then add a new blank editor
+        // otherwise just don't
+        return (
+          <React.Fragment>
+            <p>Add at least {state.minPlayers} players to start the game.</p>
+            <div className="editor">
+              <input type="text" />
+              <button>ADD</button>
+            </div>
+            <div>
+              <input type="text" />
+              <button>ADD</button>
+            </div>
+            <ul className="small-print">
+              <li>Enter: add player.</li>
+              {state.players.length >= state.minPlayers ? (
+                <li>Shift+Enter: start game.</li>
+              ) : null}
+            </ul>
           </React.Fragment>
         );
       case TURN:
         return (
           <React.Fragment>
             {state.players.map(makePlayer(state.currentPlayer))}
-            <div>
+            <div className="control-bar">
               <button onClick={first} className="control">
                 {"<<"}
               </button>
@@ -213,16 +250,16 @@ const update = state => {
               <button onClick={last} className="control">
                 {">>"}
               </button>
-              <button onClick={next} className="control submit">
-                DONE
+              <button onClick={next} className="control">
+                ↵
               </button>
             </div>
             <ul className="small-print">
-              <li>LeftArrow: go to previous station</li>
-              <li>RightArrow: go to next station</li>
-              <li>Shift+LeftArrow: go to first station</li>
-              <li>Shift+RightArrow: go to last station</li>
-              <li>Enter: end your turn</li>
+              <li>LeftArrow: go to previous station.</li>
+              <li>RightArrow: go to next station.</li>
+              <li>Shift+LeftArrow: go to first station.</li>
+              <li>Shift+RightArrow: go to last station.</li>
+              <li>Enter: end your turn.</li>
             </ul>
           </React.Fragment>
         );
@@ -238,11 +275,18 @@ const update = state => {
                 NEW GAME
               </button>
             </div>
-            <p className="small-print">(or hit ENTER to play again)</p>
+            <ul className="small-print">
+              <li>Enter: play again.</li>
+              <li>Shift+Enter: play a new game.</li>
+            </ul>
           </React.Fragment>
         );
       default:
-        return null;
+        return (
+          <code className="error">
+            Error: un-implemented state {state.currentState.toString()}
+          </code>
+        );
     }
   };
 
@@ -254,7 +298,10 @@ const update = state => {
       onShiftRight={last}
       onEnter={resolveOnEnter()}
     >
-      {uiFromState()}
+      <React.Fragment>
+        <h1>Station Race!</h1>
+        {uiFromState()}
+      </React.Fragment>
     </KeyboardController>,
     el
   );
