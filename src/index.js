@@ -11,81 +11,63 @@ const TURN = Symbol("TURN");
 const OVER = Symbol("OVER");
 
 // State making functions
-const makeBeginState = () => ({ state: BEGIN });
+const makeBeginState = () => ({ tag: BEGIN });
 
 const makeSetupState = (minPlayers, maxPlayers) => ({
-  state: SETUP,
+  tag: SETUP,
   minPlayers,
   maxPlayers,
+  playerCount: 0,
   players: [...Array(maxPlayers)].reduce((ps, i) => ({ ...ps, [i]: null }), {})
 });
 
 const makeTurnState = players => ({
+  tag: TURN,
   currentPlayer: 0,
   firstStation: 1,
   lastStation: 3,
   players: Object.values(players).filter(Boolean)
 });
 
-const makeOverState = winner => ({
-  state: OVER,
-  winner
+const makeOverState = state => ({
+  ...state,
+  tag: OVER,
+  winner: winner(state)
 });
 
 // Transitions
+const SETUP_NEW_GAME = Symbol("SETUP_NEW_GAME");
+const UPDATE_PLAYER = Symbol("UPDATE_PLAYER");
+const START = Symbol("START");
+const NEXT_TURN = Symbol("NEXT_TURN");
 const GO_LEFT = Symbol("GO_LEFT");
 const GO_RIGHT = Symbol("GO_RIGHT");
 const GO_FIRST = Symbol("GO_FIRST");
 const GO_LAST = Symbol("GO_LAST");
-const NEXT_TURN = Symbol("NEXT_TURN");
-const NEW_GAME = Symbol("NEW_GAME");
 const PLAY_AGAIN = Symbol("PLAY_AGAIN");
-const UPDATE_PLAYER = Symbol("UPDATE_PLAYER");
+const BEGIN_AGAIN = Symbol("BEGIN_AGAIN");
 
-const initialGame = (minPlayers, maxPlayers) => ({
-  currentPlayer: 0,
-  minPlayers,
-  maxPlayers,
-  firstStation: 0,
-  lastStation: 3,
-  playerSetup: [
-    ...Array(maxPlayers).reduce((setup, i) => ({ [i]: { station: 0 } }))
-  ],
-  // playerSetup: {
-  //   "0": { station: 0 },
-  //   "1": { station: 0 },
-  //   "2": { station: 0 },
-  //   "3": { station: 0 }
-  // },
-  players: [
-    { name: "Player 1", station: 0 },
-    { name: "Player 2", station: 0 }
-    // { name: "Player 3", station: 0 },
-    // { name: "Player 4", station: 0 },
-  ]
-});
-
-const newGame = state => ({
-  ...state,
-  ...initialGame(2, 4),
-  currentState: SETUP
-});
-
-const updatePlayer = (state, { i, name }) => {
-  const maybePlayer = state.players[i];
-  const player = maybePlayer ? { ...maybePlayer, name } : { name, station: 0 };
-  state.players[i] = player;
-  return state;
+const updatePlayers = (state, { i, name }) => {
+  const invalidName = /^\s+$/.test(name) || name === "";
+  const players = invalidName
+    ? { ...state.players, [i]: null }
+    : { ...state.players, [i]: { name, station: 0 } };
+  const playerCount = Object.values(players).filter(Boolean).length;
+  return { ...state, players, playerCount };
 };
 
-const playAgain = state => ({
-  ...state,
-  currentPlayer: 0,
-  currentState: TURN,
-  players: state.players.map(player => ({ ...player, station: 0 }))
-});
+const tryToStartGame = state =>
+  state.playerCount >= state.minPlayers ? makeTurnState(state.players) : state;
 
 const nextPlayer = state => (state.currentPlayer + 1) % state.players.length;
+
+const winner = state =>
+  state.players.find(player => player.station === state.lastStation);
+
+const nextTurn = state =>
+  winner(state)
+    ? makeOverState(state)
+    : { ...state, currentPlayer: nextPlayer(state) };
 
 const goLeft = (state, player) =>
   player.station > state.firstStation
@@ -115,22 +97,23 @@ const withCurrentPlayer = (state, fn) => {
   return state;
 };
 
-const winner = state =>
-  state.players.find(player => player.station === state.lastStation);
-
-const nextTurn = state =>
-  winner(state)
-    ? { ...state, currentState: OVER }
-    : { ...state, currentPlayer: nextPlayer(state) };
+const playAgain = state => {
+  return {
+    ...state,
+    currentPlayer: 0,
+    tag: TURN,
+    players: state.players.map(player => ({ ...player, station: 0 }))
+  };
+};
 
 const reduce = (state, { type, payload }) => {
   switch (type) {
-    case NEW_GAME:
-      return newGame(state);
+    case SETUP_NEW_GAME:
+      return makeSetupState(2, 4);
     case UPDATE_PLAYER:
-      return updatePlayer(state, payload);
-    case PLAY_AGAIN:
-      return playAgain(state);
+      return updatePlayers(state, payload);
+    case START:
+      return tryToStartGame(state);
     case NEXT_TURN:
       return nextTurn(state);
     case GO_LEFT:
@@ -141,6 +124,10 @@ const reduce = (state, { type, payload }) => {
       return withCurrentPlayer(state, goFirst);
     case GO_LAST:
       return withCurrentPlayer(state, goLast);
+    case PLAY_AGAIN:
+      return playAgain(state);
+    case BEGIN_AGAIN:
+      return makeBeginState();
     default:
       return state;
   }
@@ -214,7 +201,9 @@ const update = state => {
   const transition = (type, payload) =>
     update(reduce(state, { type, payload }));
 
-  const begin = () => transition(NEW_GAME);
+  const begin = () => transition(SETUP_NEW_GAME);
+  const beginAgain = () => transition(BEGIN_AGAIN);
+  const start = () => transition(START);
   const again = () => transition(PLAY_AGAIN);
   const next = () => transition(NEXT_TURN);
   const left = () => transition(GO_LEFT);
@@ -225,18 +214,31 @@ const update = state => {
     transition(UPDATE_PLAYER, { i, name: e.target.value });
 
   const resolveOnEnter = () => {
-    switch (state.currentState) {
+    switch (state.tag) {
       case BEGIN:
-      case OVER:
         return begin;
+      case SETUP:
+        return start;
       case TURN:
-      default:
         return next;
+      case OVER:
+        return again;
+      default:
+        return () => {};
+    }
+  };
+
+  const resolveShiftEnter = () => {
+    switch (state.tag) {
+      case OVER:
+        return beginAgain;
+      default:
+        return () => {};
     }
   };
 
   const uiFromState = () => {
-    switch (state.currentState) {
+    switch (state.tag) {
       case BEGIN:
         return (
           <React.Fragment>
@@ -269,10 +271,15 @@ const update = state => {
                 />{" "}
               </div>
             ))}
+            {state.playerCount >= state.minPlayers ? (
+              <button className="control control-large" onClick={start}>
+                START
+              </button>
+            ) : null}
 
             <ul className="small-print">
-              {state.players.length >= state.minPlayers ? (
-                <li>Shift+Enter: start game.</li>
+              {state.playerCount >= state.minPlayers ? (
+                <li>Enter: start game.</li>
               ) : null}
             </ul>
           </React.Fragment>
@@ -311,7 +318,7 @@ const update = state => {
       case OVER:
         return (
           <React.Fragment>
-            <p>Game Over! {winner(state).name} won the game.</p>
+            <p>Game Over! {state.winner.name} won the game.</p>
             <div>
               <button className="control control-large" onClick={again}>
                 PLAY AGAIN
@@ -329,7 +336,7 @@ const update = state => {
       default:
         return (
           <code className="error">
-            Error: un-implemented state {state.currentState.toString()}
+            Error: un-implemented state {state.tag.toString()}
           </code>
         );
     }
@@ -342,6 +349,7 @@ const update = state => {
       onShiftLeft={first}
       onShiftRight={last}
       onEnter={resolveOnEnter()}
+      onShiftEnter={resolveShiftEnter()}
     >
       <React.Fragment>
         <h1>Station Race!</h1>
@@ -352,4 +360,4 @@ const update = state => {
   );
 };
 
-update({ currentState: BEGIN });
+update(makeBeginState());
