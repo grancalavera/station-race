@@ -48,7 +48,7 @@ const PLAY_AGAIN = Symbol("PLAY_AGAIN");
 const BEGIN_AGAIN = Symbol("BEGIN_AGAIN");
 
 const updatePlayers = (state, { i, name }) => {
-  const invalidName = /^\s+$/.test(name) || name === "";
+  const invalidName = /^\s*$/.test(name);
   const players = invalidName
     ? { ...state.players, [i]: null }
     : { ...state.players, [i]: { name, station: 0 } };
