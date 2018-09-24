@@ -193,6 +193,15 @@ class KeyboardController extends React.Component {
   }
 }
 
+KeyboardController.defaultProps = {
+  onLeft: () => {},
+  onRight: () => {},
+  onShiftLeft: () => {},
+  onShiftRight: () => {},
+  onEnter: () => {},
+  onShiftEnter: () => {}
+};
+
 const Player = ({ name, station, isCurrentPlayer }) => (
   <div>
     <code>[{isCurrentPlayer ? "X" : " "}]</code>
@@ -216,23 +225,13 @@ const update = state => {
     sendInput(UPDATE_PLAYER, { i, name: e.target.value });
 
   const keyboardProps = () => {
-    const props = {
-      onLeft: () => {},
-      onRight: () => {},
-      onShiftLeft: () => {},
-      onShiftRight: () => {},
-      onEnter: () => {},
-      onShiftEnter: () => {}
-    };
-
     switch (state.tag) {
       case BEGIN:
-        return { ...props, onEnter: begin };
+        return { onEnter: begin };
       case SETUP:
-        return { ...props, onEnter: start };
+        return { onEnter: start };
       case TURN:
         return {
-          ...props,
           onEnter: next,
           onLeft: left,
           onRight: right,
@@ -240,9 +239,9 @@ const update = state => {
           onShiftRight: last
         };
       case OVER:
-        return { ...props, onEnter: again, onShiftEnter: beginAgain };
+        return { onEnter: again, onShiftEnter: beginAgain };
       default:
-        return props;
+        return {};
     }
   };
 
