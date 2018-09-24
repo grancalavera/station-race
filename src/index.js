@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import "./index.css";
 
 // Utils
+
 const hasEnoughPlayers = state => state.playerCount >= state.minPlayers;
 const nextPlayer = state => (state.currentPlayer + 1) % state.players.length;
 const winner = state =>
@@ -10,12 +11,14 @@ const winner = state =>
 const hasWinner = state => !!winner(state);
 
 // States
+
 const BEGIN = "BEGIN";
 const SETUP = "SETUP";
 const TURN = "TURN";
 const OVER = "OVER";
 
 // Inputs
+
 const SETUP_NEW_GAME = "SETUP_NEW_GAME";
 const UPDATE_PLAYER = "UPDATE_PLAYER";
 const START = "START";
@@ -27,7 +30,8 @@ const GO_LAST = "GO_LAST";
 const PLAY_AGAIN = "PLAY_AGAIN";
 const BEGIN_AGAIN = "BEGIN_AGAIN";
 
-// Transitions
+// State transitions
+
 const toBeginState = () => ({ tag: BEGIN });
 
 const fromBeginToSetupState = (minPlayers, maxPlayers) => ({
@@ -69,6 +73,7 @@ const fromOverToTurnState = state => {
 const fromOverToBeginState = toBeginState;
 
 // State identities
+
 const updatePlayerAndStay = (state, { i, name }) => {
   const invalidName = /^\s*$/.test(name);
   const players = {
@@ -109,7 +114,8 @@ const withCurrentPlayer = (state, fn) => {
 };
 
 // Input processing
-const reduce = (state, { input, payload }) => {
+
+const processInput = (state, { input, payload }) => {
   switch (input) {
     case SETUP_NEW_GAME:
       return fromBeginToSetupState(2, 4);
@@ -141,6 +147,7 @@ const reduce = (state, { input, payload }) => {
 };
 
 // UI
+
 class KeyboardController extends React.Component {
   constructor(props) {
     super(props);
@@ -213,7 +220,7 @@ const Player = ({ name, station, isCurrentPlayer }) => (
 const StationRace = state => {
   const whenStateIs = tag => state.tag === tag;
   const sendInput = (input, payload) =>
-    update(reduce(state, { input, payload }));
+    update(processInput(state, { input, payload }));
   const setup = () => sendInput(SETUP_NEW_GAME);
   const beginAgain = () => sendInput(BEGIN_AGAIN);
   const start = () => sendInput(START);
