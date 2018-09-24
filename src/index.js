@@ -59,7 +59,7 @@ const fromTurnToOverState = state => ({
   winner: winner(state)
 });
 
-const fromOverToTurn = state => {
+const fromOverToTurnState = state => {
   return {
     ...state,
     currentPlayer: 0,
@@ -68,7 +68,7 @@ const fromOverToTurn = state => {
   };
 };
 
-const fromOverToBegin = toBeginState;
+const fromOverToBeginState = toBeginState;
 
 const updatePlayerAndStay = (state, { i, name }) => {
   const invalidName = /^\s*$/.test(name);
@@ -132,9 +132,9 @@ const reduce = (state, { input, payload }) => {
     case GO_LAST:
       return withCurrentPlayer(state, goLastAndStay);
     case PLAY_AGAIN:
-      return fromOverToTurn(state);
+      return fromOverToTurnState(state);
     case BEGIN_AGAIN:
-      return fromOverToBegin();
+      return fromOverToBeginState();
     default:
       return state;
   }
