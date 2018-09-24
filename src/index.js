@@ -148,7 +148,7 @@ const processInput = (state, { input, payload }) => {
 
 // UI
 
-class KeyboardController extends React.Component {
+class Keyboard extends React.Component {
   constructor(props) {
     super(props);
     this.handleKeydown = this.handleKeydown.bind(this);
@@ -201,7 +201,7 @@ class KeyboardController extends React.Component {
   }
 }
 
-KeyboardController.defaultProps = {
+Keyboard.defaultProps = {
   onLeft: () => {},
   onRight: () => {},
   onShiftLeft: () => {},
@@ -210,15 +210,9 @@ KeyboardController.defaultProps = {
   onShiftEnter: () => {}
 };
 
-const Player = ({ name, station, isCurrentPlayer }) => (
-  <div>
-    <code>[{isCurrentPlayer ? "X" : " "}]</code>
-    {name} is at station {station}
-  </div>
-);
-
 const StationRace = state => {
   const whenStateIs = tag => state.tag === tag;
+  const isCurrentPlayer = i => state.currentPlayer === i;
   const sendInput = (input, payload) =>
     update(processInput(state, { input, payload }));
   const setup = () => sendInput(SETUP_NEW_GAME);
@@ -238,7 +232,7 @@ const StationRace = state => {
       <h1>Station Race!</h1>
 
       {whenStateIs(BEGIN) && (
-        <KeyboardController onEnter={setup}>
+        <Keyboard onEnter={setup}>
           <p>If you can make sense of this game you're half way to winning.</p>
           <button className="control control-large" onClick={setup}>
             BEGIN
@@ -246,11 +240,11 @@ const StationRace = state => {
           <ul className="small-print">
             <li>Enter: begin the game.</li>
           </ul>
-        </KeyboardController>
+        </Keyboard>
       )}
 
       {whenStateIs(SETUP) && (
-        <KeyboardController onEnter={start}>
+        <Keyboard onEnter={start}>
           <p>
             Add at least {state.minPlayers} players to start the game.
             <br />
@@ -277,23 +271,22 @@ const StationRace = state => {
               <li>Enter: start game.</li>
             ) : null}
           </ul>
-        </KeyboardController>
+        </Keyboard>
       )}
 
       {whenStateIs(TURN) && (
-        <KeyboardController
+        <Keyboard
           onEnter={next}
           onLeft={left}
           onRight={right}
           onShiftLeft={first}
           onShiftRight={last}
         >
-          {state.players.map((props, i) => (
-            <Player
-              key={i}
-              {...props}
-              isCurrentPlayer={state.currentPlayer === i}
-            />
+          {state.players.map(({ name, station }, i) => (
+            <div key={i}>
+              <code>[{isCurrentPlayer(i) ? "X" : " "}]</code>
+              {name} is at station {station}
+            </div>
           ))}
           <div className="control-bar">
             <button onClick={first} className="control">
@@ -319,11 +312,11 @@ const StationRace = state => {
             <li>Shift+RightArrow: go to last station.</li>
             <li>Enter: end your turn.</li>
           </ul>
-        </KeyboardController>
+        </Keyboard>
       )}
 
       {whenStateIs(OVER) && (
-        <KeyboardController onEnter={again} onShiftEnter={beginAgain}>
+        <Keyboard onEnter={again} onShiftEnter={beginAgain}>
           <p>Game Over! {state.winner.name} won the game.</p>
           <div>
             <button className="control control-large" onClick={again}>
@@ -337,7 +330,7 @@ const StationRace = state => {
             <li>Enter: play again.</li>
             <li>Shift+Enter: play a new game.</li>
           </ul>
-        </KeyboardController>
+        </Keyboard>
       )}
     </React.Fragment>
   );
