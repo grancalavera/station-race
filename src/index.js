@@ -109,8 +109,8 @@ const withCurrentPlayer = (state, fn) => {
   };
 };
 
-const reduce = (state, { type, payload }) => {
-  switch (type) {
+const reduce = (state, { input, payload }) => {
+  switch (input) {
     case SETUP_NEW_GAME:
       return fromBeginToSetupState(2, 4);
     case UPDATE_PLAYER:
@@ -211,7 +211,8 @@ const Player = ({ name, station, isCurrentPlayer }) => (
 
 const StationRace = state => {
   const whenStateIs = tag => state.tag === tag;
-  const sendInput = (type, payload) => update(reduce(state, { type, payload }));
+  const sendInput = (input, payload) =>
+    update(reduce(state, { input, payload }));
   const setup = () => sendInput(SETUP_NEW_GAME);
   const beginAgain = () => sendInput(BEGIN_AGAIN);
   const start = () => sendInput(START);
