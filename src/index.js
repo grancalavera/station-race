@@ -95,7 +95,7 @@ const goFirstAndStay = (state, player) => ({
   station: state.firstStation
 });
 
-const goLast = (state, player) => ({
+const goLastAndStay = (state, player) => ({
   ...player,
   station: state.lastStation
 });
@@ -130,7 +130,7 @@ const reduce = (state, { type, payload }) => {
     case GO_FIRST:
       return withCurrentPlayer(state, goFirstAndStay);
     case GO_LAST:
-      return withCurrentPlayer(state, goLast);
+      return withCurrentPlayer(state, goLastAndStay);
     case PLAY_AGAIN:
       return fromOverToTurn(state);
     case BEGIN_AGAIN:
@@ -209,7 +209,7 @@ const Player = ({ name, station, isCurrentPlayer }) => (
   </div>
 );
 
-const update = state => {
+const StationRace = state => {
   const whenStateIs = tag => state.tag === tag;
   const sendInput = (type, payload) => update(reduce(state, { type, payload }));
   const setup = () => sendInput(SETUP_NEW_GAME);
@@ -224,7 +224,7 @@ const update = state => {
   const updatePlayer = i => e =>
     sendInput(UPDATE_PLAYER, { i, name: e.target.value });
 
-  ReactDOM.render(
+  return (
     <React.Fragment>
       <h1>Station Race!</h1>
 
@@ -312,6 +312,7 @@ const update = state => {
           </ul>
         </KeyboardController>
       )}
+
       {whenStateIs(OVER) && (
         <KeyboardController onEnter={again} onShiftEnter={beginAgain}>
           <p>Game Over! {state.winner.name} won the game.</p>
@@ -329,9 +330,12 @@ const update = state => {
           </ul>
         </KeyboardController>
       )}
-    </React.Fragment>,
-    el
+    </React.Fragment>
   );
+};
+
+const update = state => {
+  ReactDOM.render(<StationRace {...state} />, el);
 };
 
 update(toBeginState());
