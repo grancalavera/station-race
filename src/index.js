@@ -5,10 +5,10 @@ import "./index.css";
 const el = document.getElementById("root");
 
 // State tags
-const BEGIN = Symbol("BEGIN");
-const SETUP = Symbol("SETUP");
-const TURN = Symbol("TURN");
-const OVER = Symbol("OVER");
+const BEGIN = "BEGIN";
+const SETUP = "SETUP";
+const TURN = "TURN";
+const OVER = "OVER";
 
 // State making functions
 const makeBeginState = () => ({ tag: BEGIN });
@@ -36,16 +36,16 @@ const makeOverState = state => ({
 });
 
 // Transitions
-const SETUP_NEW_GAME = Symbol("SETUP_NEW_GAME");
-const UPDATE_PLAYER = Symbol("UPDATE_PLAYER");
-const START = Symbol("START");
-const NEXT_TURN = Symbol("NEXT_TURN");
-const GO_LEFT = Symbol("GO_LEFT");
-const GO_RIGHT = Symbol("GO_RIGHT");
-const GO_FIRST = Symbol("GO_FIRST");
-const GO_LAST = Symbol("GO_LAST");
-const PLAY_AGAIN = Symbol("PLAY_AGAIN");
-const BEGIN_AGAIN = Symbol("BEGIN_AGAIN");
+const SETUP_NEW_GAME = "SETUP_NEW_GAME";
+const UPDATE_PLAYER = "UPDATE_PLAYER";
+const START = "START";
+const NEXT_TURN = "NEXT_TURN";
+const GO_LEFT = "GO_LEFT";
+const GO_RIGHT = "GO_RIGHT";
+const GO_FIRST = "GO_FIRST";
+const GO_LAST = "GO_LAST";
+const PLAY_AGAIN = "PLAY_AGAIN";
+const BEGIN_AGAIN = "BEGIN_AGAIN";
 
 const updatePlayers = (state, { i, name }) => {
   const invalidName = /^\s*$/.test(name);
