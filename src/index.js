@@ -4,38 +4,20 @@ import "./index.css";
 
 const el = document.getElementById("root");
 
-// State tags
+// Utils
+const hasEnoughPlayers = state => state.playerCount >= state.minPlayers;
+const nextPlayer = state => (state.currentPlayer + 1) % state.players.length;
+const winner = state =>
+  state.players.find(player => player.station === state.lastStation);
+const hasWinner = state => !!winner(state);
+
+// States
 const BEGIN = "BEGIN";
 const SETUP = "SETUP";
 const TURN = "TURN";
 const OVER = "OVER";
 
-// State making functions
-const makeBeginState = () => ({ tag: BEGIN });
-
-const makeSetupState = (minPlayers, maxPlayers) => ({
-  tag: SETUP,
-  minPlayers,
-  maxPlayers,
-  playerCount: 0,
-  players: [...Array(maxPlayers)].reduce((ps, i) => ({ ...ps, [i]: null }), {})
-});
-
-const makeTurnState = players => ({
-  tag: TURN,
-  currentPlayer: 0,
-  firstStation: 1,
-  lastStation: 3,
-  players: Object.values(players).filter(Boolean)
-});
-
-const makeOverState = state => ({
-  ...state,
-  tag: OVER,
-  winner: winner(state)
-});
-
-// Transitions
+// Inputs
 const SETUP_NEW_GAME = "SETUP_NEW_GAME";
 const UPDATE_PLAYER = "UPDATE_PLAYER";
 const START = "START";
@@ -47,7 +29,48 @@ const GO_LAST = "GO_LAST";
 const PLAY_AGAIN = "PLAY_AGAIN";
 const BEGIN_AGAIN = "BEGIN_AGAIN";
 
-const updatePlayers = (state, { i, name }) => {
+// Transitions
+const toBeginState = () => ({ tag: BEGIN });
+
+const fromBeginToSetupState = (minPlayers, maxPlayers) => ({
+  tag: SETUP,
+  minPlayers,
+  maxPlayers,
+  playerCount: 0,
+  players: [...Array(maxPlayers)].reduce((ps, i) => ({ ...ps, [i]: null }), {})
+});
+
+const fromSetupToTurnState = players => ({
+  tag: TURN,
+  currentPlayer: 0,
+  firstStation: 1,
+  lastStation: 3,
+  players: Object.values(players).filter(Boolean)
+});
+
+const fromTurnToTurnState = state => ({
+  ...state,
+  currentPlayer: nextPlayer(state)
+});
+
+const fromTurnToOverState = state => ({
+  ...state,
+  tag: OVER,
+  winner: winner(state)
+});
+
+const fromOverToTurn = state => {
+  return {
+    ...state,
+    currentPlayer: 0,
+    tag: TURN,
+    players: state.players.map(player => ({ ...player, station: 1 }))
+  };
+};
+
+const fromOverToBegin = toBeginState;
+
+const updatePlayerAndStay = (state, { i, name }) => {
   const invalidName = /^\s*$/.test(name);
   const players = {
     ...state.players,
@@ -57,30 +80,17 @@ const updatePlayers = (state, { i, name }) => {
   return { ...state, players, playerCount };
 };
 
-const tryToStartGame = state =>
-  state.playerCount >= state.minPlayers ? makeTurnState(state.players) : state;
-
-const nextPlayer = state => (state.currentPlayer + 1) % state.players.length;
-
-const winner = state =>
-  state.players.find(player => player.station === state.lastStation);
-
-const nextTurn = state =>
-  winner(state)
-    ? makeOverState(state)
-    : { ...state, currentPlayer: nextPlayer(state) };
-
-const goLeft = (state, player) =>
+const goLeftAndStay = (state, player) =>
   player.station > state.firstStation
     ? { ...player, station: player.station - 1 }
     : player;
 
-const goRight = (state, player) =>
+const goRightAndStay = (state, player) =>
   player.station < state.lastStation
     ? { ...player, station: player.station + 1 }
     : player;
 
-const goFirst = (state, player) => ({
+const goFirstAndStay = (state, player) => ({
   ...player,
   station: state.firstStation
 });
@@ -99,37 +109,32 @@ const withCurrentPlayer = (state, fn) => {
   };
 };
 
-const playAgain = state => {
-  return {
-    ...state,
-    currentPlayer: 0,
-    tag: TURN,
-    players: state.players.map(player => ({ ...player, station: 0 }))
-  };
-};
-
 const reduce = (state, { type, payload }) => {
   switch (type) {
     case SETUP_NEW_GAME:
-      return makeSetupState(2, 4);
+      return fromBeginToSetupState(2, 4);
     case UPDATE_PLAYER:
-      return updatePlayers(state, payload);
+      return updatePlayerAndStay(state, payload);
     case START:
-      return tryToStartGame(state);
+      return hasEnoughPlayers(state)
+        ? fromSetupToTurnState(state.players)
+        : state;
     case NEXT_TURN:
-      return nextTurn(state);
+      return hasWinner(state)
+        ? fromTurnToOverState(state)
+        : fromTurnToTurnState(state);
     case GO_LEFT:
-      return withCurrentPlayer(state, goLeft);
+      return withCurrentPlayer(state, goLeftAndStay);
     case GO_RIGHT:
-      return withCurrentPlayer(state, goRight);
+      return withCurrentPlayer(state, goRightAndStay);
     case GO_FIRST:
-      return withCurrentPlayer(state, goFirst);
+      return withCurrentPlayer(state, goFirstAndStay);
     case GO_LAST:
       return withCurrentPlayer(state, goLast);
     case PLAY_AGAIN:
-      return playAgain(state);
+      return fromOverToTurn(state);
     case BEGIN_AGAIN:
-      return makeBeginState();
+      return fromOverToBegin();
     default:
       return state;
   }
@@ -195,25 +200,19 @@ const Player = ({ name, station, isCurrentPlayer }) => (
   </div>
 );
 
-const makePlayer = currentPlayer => (props, i) => (
-  <Player key={i} {...props} isCurrentPlayer={currentPlayer === i} />
-);
-
 const update = state => {
-  const transition = (type, payload) =>
-    update(reduce(state, { type, payload }));
-
-  const begin = () => transition(SETUP_NEW_GAME);
-  const beginAgain = () => transition(BEGIN_AGAIN);
-  const start = () => transition(START);
-  const again = () => transition(PLAY_AGAIN);
-  const next = () => transition(NEXT_TURN);
-  const left = () => transition(GO_LEFT);
-  const right = () => transition(GO_RIGHT);
-  const first = () => transition(GO_FIRST);
-  const last = () => transition(GO_LAST);
+  const sendInput = (type, payload) => update(reduce(state, { type, payload }));
+  const begin = () => sendInput(SETUP_NEW_GAME);
+  const beginAgain = () => sendInput(BEGIN_AGAIN);
+  const start = () => sendInput(START);
+  const again = () => sendInput(PLAY_AGAIN);
+  const next = () => sendInput(NEXT_TURN);
+  const left = () => sendInput(GO_LEFT);
+  const right = () => sendInput(GO_RIGHT);
+  const first = () => sendInput(GO_FIRST);
+  const last = () => sendInput(GO_LAST);
   const updatePlayer = i => e =>
-    transition(UPDATE_PLAYER, { i, name: e.target.value });
+    sendInput(UPDATE_PLAYER, { i, name: e.target.value });
 
   const uiFromState = () => {
     switch (state.tag) {
@@ -262,11 +261,16 @@ const update = state => {
             </ul>
           </React.Fragment>
         );
-
       case TURN:
         return (
           <React.Fragment>
-            {state.players.map(makePlayer(state.currentPlayer))}
+            {state.players.map((props, i) => (
+              <Player
+                key={i}
+                {...props}
+                isCurrentPlayer={state.currentPlayer === i}
+              />
+            ))}
             <div className="control-bar">
               <button onClick={first} className="control">
                 {"<<"}
@@ -320,8 +324,8 @@ const update = state => {
     }
   };
 
-  const resolveKeyboardProps = () => {
-    const keyboardProps = {
+  const keyboardProps = () => {
+    const props = {
       onLeft: () => {},
       onRight: () => {},
       onShiftLeft: () => {},
@@ -332,12 +336,12 @@ const update = state => {
 
     switch (state.tag) {
       case BEGIN:
-        return { ...keyboardProps, onEnter: begin };
+        return { ...props, onEnter: begin };
       case SETUP:
-        return { ...keyboardProps, onEnter: start };
+        return { ...props, onEnter: start };
       case TURN:
         return {
-          ...keyboardProps,
+          ...props,
           onEnter: next,
           onLeft: left,
           onRight: right,
@@ -345,14 +349,14 @@ const update = state => {
           onShiftRight: last
         };
       case OVER:
-        return { ...keyboardProps, onEnter: again, onShiftEnter: beginAgain };
+        return { ...props, onEnter: again, onShiftEnter: beginAgain };
       default:
-        return keyboardProps;
+        return props;
     }
   };
 
   ReactDOM.render(
-    <KeyboardController {...resolveKeyboardProps()}>
+    <KeyboardController {...keyboardProps()}>
       <React.Fragment>
         <h1>Station Race!</h1>
         {uiFromState()}
@@ -362,4 +366,4 @@ const update = state => {
   );
 };
 
-update(makeBeginState());
+update(toBeginState());
