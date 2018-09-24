@@ -215,30 +215,6 @@ const update = state => {
   const updatePlayer = i => e =>
     transition(UPDATE_PLAYER, { i, name: e.target.value });
 
-  const resolveOnEnter = () => {
-    switch (state.tag) {
-      case BEGIN:
-        return begin;
-      case SETUP:
-        return start;
-      case TURN:
-        return next;
-      case OVER:
-        return again;
-      default:
-        return () => {};
-    }
-  };
-
-  const resolveShiftEnter = () => {
-    switch (state.tag) {
-      case OVER:
-        return beginAgain;
-      default:
-        return () => {};
-    }
-  };
-
   const uiFromState = () => {
     switch (state.tag) {
       case BEGIN:
@@ -344,15 +320,39 @@ const update = state => {
     }
   };
 
+  const resolveKeyboardProps = () => {
+    const keyboardProps = {
+      onLeft: () => {},
+      onRight: () => {},
+      onShiftLeft: () => {},
+      onShiftRight: () => {},
+      onEnter: () => {},
+      onShiftEnter: () => {}
+    };
+
+    switch (state.tag) {
+      case BEGIN:
+        return { ...keyboardProps, onEnter: begin };
+      case SETUP:
+        return { ...keyboardProps, onEnter: start };
+      case TURN:
+        return {
+          ...keyboardProps,
+          onEnter: next,
+          onLeft: left,
+          onRight: right,
+          onShiftLeft: first,
+          onShiftRight: last
+        };
+      case OVER:
+        return { ...keyboardProps, onEnter: again, onShiftEnter: beginAgain };
+      default:
+        return keyboardProps;
+    }
+  };
+
   ReactDOM.render(
-    <KeyboardController
-      onLeft={left}
-      onRight={right}
-      onShiftLeft={first}
-      onShiftRight={last}
-      onEnter={resolveOnEnter()}
-      onShiftEnter={resolveShiftEnter()}
-    >
+    <KeyboardController {...resolveKeyboardProps()}>
       <React.Fragment>
         <h1>Station Race!</h1>
         {uiFromState()}
