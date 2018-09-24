@@ -50,11 +50,6 @@ const fromSetupToTurnState = players => ({
   players: Object.values(players).filter(Boolean)
 });
 
-const fromTurnToTurnState = state => ({
-  ...state,
-  currentPlayer: nextPlayer(state)
-});
-
 const fromTurnToOverState = state => ({
   ...state,
   tag: OVER,
@@ -83,6 +78,11 @@ const updatePlayerAndStay = (state, { i, name }) => {
   const playerCount = Object.values(players).filter(Boolean).length;
   return { ...state, players, playerCount };
 };
+
+const nextPlayerAndStay = state => ({
+  ...state,
+  currentPlayer: nextPlayer(state)
+});
 
 const goLeftAndStay = (state, player) =>
   player.station > state.firstStation
@@ -128,7 +128,7 @@ const processInput = (state, { input, payload }) => {
     case NEXT_TURN:
       return hasWinner(state)
         ? fromTurnToOverState(state)
-        : fromTurnToTurnState(state);
+        : nextPlayerAndStay(state);
     case GO_LEFT:
       return withCurrentPlayer(state, goLeftAndStay);
     case GO_RIGHT:
