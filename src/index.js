@@ -2,8 +2,6 @@ import React from "react";
 import ReactDOM from "react-dom";
 import "./index.css";
 
-const el = document.getElementById("root");
-
 // Utils
 const hasEnoughPlayers = state => state.playerCount >= state.minPlayers;
 const nextPlayer = state => (state.currentPlayer + 1) % state.players.length;
@@ -70,6 +68,7 @@ const fromOverToTurnState = state => {
 
 const fromOverToBeginState = toBeginState;
 
+// State identities
 const updatePlayerAndStay = (state, { i, name }) => {
   const invalidName = /^\s*$/.test(name);
   const players = {
@@ -109,6 +108,7 @@ const withCurrentPlayer = (state, fn) => {
   };
 };
 
+// Input processing
 const reduce = (state, { input, payload }) => {
   switch (input) {
     case SETUP_NEW_GAME:
@@ -140,6 +140,7 @@ const reduce = (state, { input, payload }) => {
   }
 };
 
+// UI
 class KeyboardController extends React.Component {
   constructor(props) {
     super(props);
@@ -335,8 +336,8 @@ const StationRace = state => {
   );
 };
 
+const el = document.getElementById("root");
 const update = state => {
   ReactDOM.render(<StationRace {...state} />, el);
 };
-
 update(toBeginState());
