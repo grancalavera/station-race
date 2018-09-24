@@ -201,6 +201,7 @@ const Player = ({ name, station, isCurrentPlayer }) => (
 );
 
 const update = state => {
+  const whenStateIs = tag => state.tag === tag;
   const sendInput = (type, payload) => update(reduce(state, { type, payload }));
   const begin = () => sendInput(SETUP_NEW_GAME);
   const beginAgain = () => sendInput(BEGIN_AGAIN);
@@ -213,116 +214,6 @@ const update = state => {
   const last = () => sendInput(GO_LAST);
   const updatePlayer = i => e =>
     sendInput(UPDATE_PLAYER, { i, name: e.target.value });
-
-  const uiFromState = () => {
-    switch (state.tag) {
-      case BEGIN:
-        return (
-          <React.Fragment>
-            <p>
-              If you can make sense of this game you're half way to winning.
-            </p>
-            <button className="control control-large" onClick={begin}>
-              BEGIN
-            </button>
-            <ul className="small-print">
-              <li>Enter: begin the game.</li>
-            </ul>
-          </React.Fragment>
-        );
-      case SETUP:
-        return (
-          <React.Fragment>
-            <p>
-              Add at least {state.minPlayers} players to start the game.
-              <br />
-              You can add up to {state.maxPlayers} players.
-            </p>
-
-            {[...Array(state.maxPlayers)].map((_, i) => (
-              <div key={i} className="editor">
-                {i + 1}:{" "}
-                <input
-                  value={state.players[i] ? state.players[i].name : ""}
-                  onChange={updatePlayer(i)}
-                />{" "}
-              </div>
-            ))}
-            {state.playerCount >= state.minPlayers ? (
-              <button className="control control-large" onClick={start}>
-                START
-              </button>
-            ) : null}
-
-            <ul className="small-print">
-              {state.playerCount >= state.minPlayers ? (
-                <li>Enter: start game.</li>
-              ) : null}
-            </ul>
-          </React.Fragment>
-        );
-      case TURN:
-        return (
-          <React.Fragment>
-            {state.players.map((props, i) => (
-              <Player
-                key={i}
-                {...props}
-                isCurrentPlayer={state.currentPlayer === i}
-              />
-            ))}
-            <div className="control-bar">
-              <button onClick={first} className="control">
-                {"<<"}
-              </button>
-              <button onClick={left} className="control">
-                {"<"}
-              </button>
-              <button onClick={right} className="control">
-                {">"}
-              </button>
-              <button onClick={last} className="control">
-                {">>"}
-              </button>
-              <button onClick={next} className="control">
-                ↵
-              </button>
-            </div>
-            <ul className="small-print">
-              <li>LeftArrow: go to previous station.</li>
-              <li>RightArrow: go to next station.</li>
-              <li>Shift+LeftArrow: go to first station.</li>
-              <li>Shift+RightArrow: go to last station.</li>
-              <li>Enter: end your turn.</li>
-            </ul>
-          </React.Fragment>
-        );
-      case OVER:
-        return (
-          <React.Fragment>
-            <p>Game Over! {state.winner.name} won the game.</p>
-            <div>
-              <button className="control control-large" onClick={again}>
-                PLAY AGAIN
-              </button>
-              <button className="control control-large" onClick={beginAgain}>
-                NEW GAME
-              </button>
-            </div>
-            <ul className="small-print">
-              <li>Enter: play again.</li>
-              <li>Shift+Enter: play a new game.</li>
-            </ul>
-          </React.Fragment>
-        );
-      default:
-        return (
-          <code className="error">
-            Error: un-implemented state {state.tag.toString()}
-          </code>
-        );
-    }
-  };
 
   const keyboardProps = () => {
     const props = {
@@ -359,7 +250,105 @@ const update = state => {
     <KeyboardController {...keyboardProps()}>
       <React.Fragment>
         <h1>Station Race!</h1>
-        {uiFromState()}
+
+        {whenStateIs(BEGIN) && (
+          <React.Fragment>
+            <p>
+              If you can make sense of this game you're half way to winning.
+            </p>
+            <button className="control control-large" onClick={begin}>
+              BEGIN
+            </button>
+            <ul className="small-print">
+              <li>Enter: begin the game.</li>
+            </ul>
+          </React.Fragment>
+        )}
+
+        {whenStateIs(SETUP) && (
+          <React.Fragment>
+            <p>
+              Add at least {state.minPlayers} players to start the game.
+              <br />
+              You can add up to {state.maxPlayers} players.
+            </p>
+
+            {[...Array(state.maxPlayers)].map((_, i) => (
+              <div key={i} className="editor">
+                {i + 1}:{" "}
+                <input
+                  value={state.players[i] ? state.players[i].name : ""}
+                  onChange={updatePlayer(i)}
+                />{" "}
+              </div>
+            ))}
+            {state.playerCount >= state.minPlayers ? (
+              <button className="control control-large" onClick={start}>
+                START
+              </button>
+            ) : null}
+
+            <ul className="small-print">
+              {state.playerCount >= state.minPlayers ? (
+                <li>Enter: start game.</li>
+              ) : null}
+            </ul>
+          </React.Fragment>
+        )}
+
+        {whenStateIs(TURN) && (
+          <React.Fragment>
+            {state.players.map((props, i) => (
+              <Player
+                key={i}
+                {...props}
+                isCurrentPlayer={state.currentPlayer === i}
+              />
+            ))}
+            <div className="control-bar">
+              <button onClick={first} className="control">
+                {"<<"}
+              </button>
+              <button onClick={left} className="control">
+                {"<"}
+              </button>
+              <button onClick={right} className="control">
+                {">"}
+              </button>
+              <button onClick={last} className="control">
+                {">>"}
+              </button>
+              <button onClick={next} className="control">
+                ↵
+              </button>
+            </div>
+            <ul className="small-print">
+              <li>LeftArrow: go to previous station.</li>
+              <li>RightArrow: go to next station.</li>
+              <li>Shift+LeftArrow: go to first station.</li>
+              <li>Shift+RightArrow: go to last station.</li>
+              <li>Enter: end your turn.</li>
+            </ul>
+          </React.Fragment>
+        )}
+
+        {whenStateIs(OVER) && (
+          <React.Fragment>
+            <p>Game Over! {state.winner.name} won the game.</p>
+            <div>
+              <button className="control control-large" onClick={again}>
+                PLAY AGAIN
+              </button>
+              <button className="control control-large" onClick={beginAgain}>
+                NEW GAME
+              </button>
+            </div>
+            <ul className="small-print">
+              <li>Enter: play again.</li>
+              <li>Shift+Enter: play a new game.</li>
+            </ul>
+          </React.Fragment>
+        )}
       </React.Fragment>
     </KeyboardController>,
     el
