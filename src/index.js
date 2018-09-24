@@ -51,7 +51,7 @@ const updatePlayers = (state, { i, name }) => {
   const invalidName = /^\s*$/.test(name);
   const players = {
     ...state.players,
-    [i]: invalidName ? null : { name, station: 0 }
+    [i]: invalidName ? null : { name, station: 1 }
   };
   const playerCount = Object.values(players).filter(Boolean).length;
   return { ...state, players, playerCount };
