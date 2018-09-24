@@ -260,6 +260,7 @@ const StationRace = state => {
               />{" "}
             </div>
           ))}
+
           {state.playerCount >= state.minPlayers ? (
             <button className="control control-large" onClick={start}>
               START
@@ -301,8 +302,8 @@ const StationRace = state => {
             <button onClick={last} className="control">
               {">>"}
             </button>
-            <button onClick={next} className="control">
-              ↵
+            <button onClick={next} className="control control-large">
+              DONE
             </button>
           </div>
           <ul className="small-print">

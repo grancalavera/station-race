@@ -5,6 +5,7 @@
 .control {
   width: 44px;
   padding: 2px;
+  margin-right: 0.25em;
 }
 
 .control.control-large {
