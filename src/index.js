@@ -103,9 +103,9 @@ const fromOverToBeginState = ({
 // State identities
 
 // just for clarity
-// justStay(state) === state
+// stay(state) === state
 const id = x => x;
-const justStay = id;
+const stay = id;
 
 const updatePlayerAndStay = ({ i, name }, state) => {
   const invalidName = /^\s*$/.test(name);
@@ -156,7 +156,7 @@ const processInput = (state, { input, payload }) => {
     case SETUP + START:
       return hasEnoughPlayers(state)
         ? fromSetupToTurnState(state)
-        : justStay(state);
+        : stay(state);
     case TURN + GET_OFF_THE_TRAIN:
       return hasWinner(state)
         ? fromTurnToOverState(state)
@@ -174,7 +174,7 @@ const processInput = (state, { input, payload }) => {
     case OVER + BEGIN_AGAIN:
       return fromOverToBeginState(state);
     default:
-      justStay(state);
+      stay(state);
   }
 };
 
@@ -427,9 +427,9 @@ class StationRace extends React.Component {
 ReactDOM.render(
   <StationRace
     firstStation={1}
-    lastStation={5}
+    lastStation={2}
     minPlayers={2}
-    maxPlayers={4}
+    maxPlayers={2}
   />,
   document.getElementById("root")
 );
