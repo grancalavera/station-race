@@ -89,7 +89,7 @@ const nextPlayerAndStay = state => ({
   currentPlayer: nextPlayer(state)
 });
 
-const withCurrentPlayer = (fn, state) => {
+const withCurrentPlayer = fn => state => {
   return {
     ...state,
     players: state.players.map(
@@ -98,25 +98,29 @@ const withCurrentPlayer = (fn, state) => {
   };
 };
 
-const goLeftAndStay = (state, player) =>
-  player.station > state.firstStation
-    ? { ...player, station: player.station - 1 }
-    : player;
+const goLeftAndStay = withCurrentPlayer(
+  (state, player) =>
+    player.station > state.firstStation
+      ? { ...player, station: player.station - 1 }
+      : player
+);
 
-const goRightAndStay = (state, player) =>
-  player.station < state.lastStation
-    ? { ...player, station: player.station + 1 }
-    : player;
+const goRightAndStay = withCurrentPlayer(
+  (state, player) =>
+    player.station < state.lastStation
+      ? { ...player, station: player.station + 1 }
+      : player
+);
 
-const goFirstAndStay = (state, player) => ({
+const goFirstAndStay = withCurrentPlayer((state, player) => ({
   ...player,
   station: state.firstStation
-});
+}));
 
-const goLastAndStay = (state, player) => ({
+const goLastAndStay = withCurrentPlayer((state, player) => ({
   ...player,
   station: state.lastStation
-});
+}));
 
 // Input processing
 
@@ -135,13 +139,13 @@ const processInput = (state, { input, payload }) => {
         ? fromTurnToOverState(state)
         : nextPlayerAndStay(state);
     case TURN + GO_LEFT:
-      return withCurrentPlayer(goLeftAndStay, state);
+      return goLeftAndStay(state);
     case TURN + GO_RIGHT:
-      return withCurrentPlayer(goRightAndStay, state);
+      return goRightAndStay(state);
     case TURN + GO_FIRST:
-      return withCurrentPlayer(goFirstAndStay, state);
+      return goFirstAndStay(state);
     case TURN + GO_LAST:
-      return withCurrentPlayer(goLastAndStay, state);
+      return goLastAndStay(state);
     case OVER + PLAY_AGAIN:
       return fromOverToTurnState(state);
     case OVER + BEGIN_AGAIN:
