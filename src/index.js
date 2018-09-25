@@ -184,7 +184,8 @@ class Keyboard extends React.Component {
     document.removeEventListener("keydown", this.handleKeydown);
   }
 
-  handleKeydown({ shiftKey, key }) {
+  handleKeydown(e) {
+    const { shiftKey, key } = e;
     const {
       onLeft,
       onRight,
@@ -196,21 +197,27 @@ class Keyboard extends React.Component {
 
     switch (shiftKey ? `Shift${key}` : key) {
       case "ArrowLeft":
+        e.preventDefault();
         onLeft();
         break;
       case "ArrowRight":
+        e.preventDefault();
         onRight();
         break;
       case "ShiftArrowLeft":
+        e.preventDefault();
         onShiftLeft();
         break;
       case "ShiftArrowRight":
+        e.preventDefault();
         onShiftRight();
         break;
       case "Enter":
+        e.preventDefault();
         onEnter();
         break;
       case "ShiftEnter":
+        e.preventDefault();
         onShiftEnter();
         break;
       default:
@@ -232,146 +239,170 @@ Keyboard.defaultProps = {
   onShiftEnter: () => {}
 };
 
-const StationRace = state => {
-  const whenStateIs = tag => state.tag === tag;
-  const isCurrentPlayer = i => state.currentPlayer === i;
-  const sendInput = (input, payload) =>
-    update(processInput(state, { input, payload }));
-  const setup = () => sendInput(SETUP_NEW_GAME);
-  const beginAgain = () => sendInput(BEGIN_AGAIN);
-  const start = () => sendInput(START);
-  const again = () => sendInput(PLAY_AGAIN);
-  const next = () => sendInput(NEXT_TURN);
-  const left = () => sendInput(GO_LEFT);
-  const right = () => sendInput(GO_RIGHT);
-  const first = () => sendInput(GO_FIRST);
-  const last = () => sendInput(GO_LAST);
-  const updatePlayer = i => e =>
-    sendInput(UPDATE_PLAYER, { i, name: e.target.value });
+class StationRace extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = toBeginState(props);
+  }
+  render() {
+    const state = this.state;
+    const whenStateIs = tag => state.tag === tag;
+    const isCurrentPlayer = i => state.currentPlayer === i;
+    const sendInput = (input, payload) =>
+      this.setState(processInput(state, { input, payload }));
+    const setup = () => sendInput(SETUP_NEW_GAME);
+    const beginAgain = () => sendInput(BEGIN_AGAIN);
+    const start = () => sendInput(START);
+    const again = () => sendInput(PLAY_AGAIN);
+    const next = () => sendInput(NEXT_TURN);
+    const left = () => sendInput(GO_LEFT);
+    const right = () => sendInput(GO_RIGHT);
+    const first = () => sendInput(GO_FIRST);
+    const last = () => sendInput(GO_LAST);
+    const updatePlayer = i => e =>
+      sendInput(UPDATE_PLAYER, { i, name: e.target.value });
 
-  return (
-    <React.Fragment>
-      <h1>Station Race!</h1>
-      <p>Get off the train at the secret station to win the game.</p>
+    return (
+      <React.Fragment>
+        <h1>Station Race!</h1>
+        <p>Get off the train at the secret station to win the game.</p>
 
-      {whenStateIs(BEGIN) && (
-        <Keyboard onEnter={setup}>
-          <p>
-            You're in a train running from station {state.firstStation} to
-            station {state.lastStation}. There is a secret station and you need
-            to get off the train there. Be the first one to guess the secret
-            station and win the game!
-          </p>
-          <button className="control control-large" onClick={setup}>
-            BEGIN
-          </button>
-          <ul className="small-print">
-            <li>Enter: begin the game.</li>
-          </ul>
-        </Keyboard>
-      )}
+        {whenStateIs(BEGIN) && (
+          <Keyboard onEnter={setup}>
+            <p>
+              You're in a train running from station {state.firstStation} to
+              station {state.lastStation}. There is a secret station and you
+              need to get off the train there. Be the first one to guess the
+              secret station and win the game!
+            </p>
+            <button
+              className="control control-large"
+              onClick={setup}
+              tabIndex={-1}
+            >
+              BEGIN
+            </button>
+            <ul className="small-print">
+              <li>Enter: begin the game.</li>
+            </ul>
+          </Keyboard>
+        )}
 
-      {whenStateIs(SETUP) && (
-        <Keyboard onEnter={start}>
-          <p>
-            Add at least {state.minPlayers} players to start the game.
-            <br />
-            You can add up to {state.maxPlayers} players.
-          </p>
+        {whenStateIs(SETUP) && (
+          <Keyboard onEnter={start}>
+            <p>
+              Add at least {state.minPlayers} players to start the game.
+              <br />
+              You can add up to {state.maxPlayers} players.
+            </p>
 
-          {[...Array(state.maxPlayers)].map((_, i) => (
-            <div key={i} className="editor">
-              {i + 1}:{" "}
-              <input
-                value={state.players[i] ? state.players[i].name : ""}
-                onChange={updatePlayer(i)}
-              />{" "}
+            {[...Array(state.maxPlayers)].map((_, i) => (
+              <div key={i} className="editor">
+                {i + 1}:{" "}
+                <input
+                  value={state.players[i] ? state.players[i].name : ""}
+                  onChange={updatePlayer(i)}
+                />{" "}
+              </div>
+            ))}
+
+            {hasEnoughPlayers(state) && (
+              <button
+                className="control control-large"
+                onClick={start}
+                tabIndex={-1}
+              >
+                START
+              </button>
+            )}
+
+            <ul className="small-print">
+              {hasEnoughPlayers(state) && <li>Enter: start game.</li>}
+            </ul>
+          </Keyboard>
+        )}
+
+        {whenStateIs(TURN) && (
+          <Keyboard
+            onEnter={next}
+            onLeft={left}
+            onRight={right}
+            onShiftLeft={first}
+            onShiftRight={last}
+          >
+            {state.players.map(({ name, station }, i) => (
+              <div key={i}>
+                <code>[{isCurrentPlayer(i) ? "X" : " "}]</code>
+                {name} is at station {station}
+              </div>
+            ))}
+            <div className="control-bar">
+              <button onClick={first} className="control" tabIndex={-1}>
+                {"<<"}
+              </button>
+              <button onClick={left} className="control" tabIndex={-1}>
+                {"<"}
+              </button>
+              <button onClick={right} className="control" tabIndex={-1}>
+                {">"}
+              </button>
+              <button onClick={last} className="control" tabIndex={-1}>
+                {">>"}
+              </button>
+              <button
+                onClick={next}
+                className="control control-large"
+                tabIndex={-1}
+              >
+                GET OFF THE TRAIN!
+              </button>
             </div>
-          ))}
+            <ul className="small-print">
+              <li>LeftArrow: go to previous station.</li>
+              <li>RightArrow: go to next station.</li>
+              <li>Shift+LeftArrow: go to first station.</li>
+              <li>Shift+RightArrow: go to last station.</li>
+              <li>Enter: get off the train.</li>
+            </ul>
+          </Keyboard>
+        )}
 
-          {hasEnoughPlayers(state) && (
-            <button className="control control-large" onClick={start}>
-              START
-            </button>
-          )}
-
-          <ul className="small-print">
-            {hasEnoughPlayers(state) && <li>Enter: start game.</li>}
-          </ul>
-        </Keyboard>
-      )}
-
-      {whenStateIs(TURN) && (
-        <Keyboard
-          onEnter={next}
-          onLeft={left}
-          onRight={right}
-          onShiftLeft={first}
-          onShiftRight={last}
-        >
-          {state.players.map(({ name, station }, i) => (
-            <div key={i}>
-              <code>[{isCurrentPlayer(i) ? "X" : " "}]</code>
-              {name} is at station {station}
+        {whenStateIs(OVER) && (
+          <Keyboard onEnter={again} onShiftEnter={beginAgain}>
+            <p>Game Over! {state.winner.name} won the game.</p>
+            <div>
+              <button
+                className="control control-large"
+                onClick={again}
+                tabIndex={-1}
+              >
+                PLAY AGAIN
+              </button>
+              <button
+                className="control control-large"
+                onClick={beginAgain}
+                tabIndex={-1}
+              >
+                NEW GAME
+              </button>
             </div>
-          ))}
-          <div className="control-bar">
-            <button onClick={first} className="control">
-              {"<<"}
-            </button>
-            <button onClick={left} className="control">
-              {"<"}
-            </button>
-            <button onClick={right} className="control">
-              {">"}
-            </button>
-            <button onClick={last} className="control">
-              {">>"}
-            </button>
-            <button onClick={next} className="control control-large">
-              GET OFF THE TRAIN!
-            </button>
-          </div>
-          <ul className="small-print">
-            <li>LeftArrow: go to previous station.</li>
-            <li>RightArrow: go to next station.</li>
-            <li>Shift+LeftArrow: go to first station.</li>
-            <li>Shift+RightArrow: go to last station.</li>
-            <li>Enter: get off the train.</li>
-          </ul>
-        </Keyboard>
-      )}
+            <ul className="small-print">
+              <li>Enter: play again.</li>
+              <li>Shift+Enter: play a new game.</li>
+            </ul>
+          </Keyboard>
+        )}
+      </React.Fragment>
+    );
+  }
+}
 
-      {whenStateIs(OVER) && (
-        <Keyboard onEnter={again} onShiftEnter={beginAgain}>
-          <p>Game Over! {state.winner.name} won the game.</p>
-          <div>
-            <button className="control control-large" onClick={again}>
-              PLAY AGAIN
-            </button>
-            <button className="control control-large" onClick={beginAgain}>
-              NEW GAME
-            </button>
-          </div>
-          <ul className="small-print">
-            <li>Enter: play again.</li>
-            <li>Shift+Enter: play a new game.</li>
-          </ul>
-        </Keyboard>
-      )}
-    </React.Fragment>
-  );
-};
-
-const el = document.getElementById("root");
-const update = state => {
-  ReactDOM.render(<StationRace {...state} />, el);
-};
-update(
-  toBeginState({
-    firstStation: 0,
-    lastStation: 10,
-    minPlayers: 3,
-    maxPlayers: 5
-  })
+ReactDOM.render(
+  <StationRace
+    firstStation={0}
+    lastStation={10}
+    minPlayers={3}
+    maxPlayers={5}
+  />,
+  document.getElementById("root")
 );
