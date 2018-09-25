@@ -122,7 +122,7 @@ const goLastAndStay = withCurrentPlayer((state, player) => ({
   station: state.lastStation
 }));
 
-// Input processing
+// State machine
 
 const processInput = (state, { input, payload }) => {
   switch (state.tag + input) {
