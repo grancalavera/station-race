@@ -9,6 +9,14 @@ const nextPlayer = state => (state.currentPlayer + 1) % state.players.length;
 const winner = state =>
   state.players.find(player => player.station === state.lastStation);
 const hasWinner = state => !!winner(state);
+const withCurrentPlayer = fn => state => {
+  return {
+    ...state,
+    players: state.players.map(
+      (player, i) => (i === state.currentPlayer ? fn(state, player) : player)
+    )
+  };
+};
 
 // States
 
@@ -88,15 +96,6 @@ const nextPlayerAndStay = state => ({
   ...state,
   currentPlayer: nextPlayer(state)
 });
-
-const withCurrentPlayer = fn => state => {
-  return {
-    ...state,
-    players: state.players.map(
-      (player, i) => (i === state.currentPlayer ? fn(state, player) : player)
-    )
-  };
-};
 
 const goLeftAndStay = withCurrentPlayer(
   (state, player) =>
