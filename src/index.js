@@ -29,7 +29,7 @@ const secretStation = ({ firstStation, lastStation }) =>
 const BEGIN = "BEGIN";
 const SETUP = "SETUP";
 const TURN = "TURN";
-const TURN_RESULT = "TURN";
+const TURN_RESULT = "TURN_RESULT";
 const OVER = "OVER";
 
 // Inputs
@@ -68,6 +68,17 @@ const fromSetupToTurnState = state => ({
   tag: TURN,
   currentPlayer: 0,
   players: Object.values(state.players).filter(Boolean)
+});
+
+const fromTurnToTurnResultState = state => ({
+  ...state,
+  tag: TURN_RESULT
+});
+
+const fromTurnResultToTurnState = state => ({
+  ...state,
+  tag: TURN,
+  player: nextPlayer(state)
 });
 
 const fromTurnToOverState = state => ({
@@ -116,11 +127,6 @@ const updatePlayerAndStay = ({ i, name }, state) => {
   return { ...state, players };
 };
 
-const nextPlayerAndStay = state => ({
-  ...state,
-  currentPlayer: nextPlayer(state)
-});
-
 const goLeftAndStay = withCurrentPlayer(
   (state, player) =>
     player.station > state.firstStation
@@ -160,7 +166,9 @@ const processInput = (state, { input, payload }) => {
     case TURN + GET_OFF_THE_TRAIN:
       return hasWinner(state)
         ? fromTurnToOverState(state)
-        : nextPlayerAndStay(state);
+        : fromTurnToTurnResultState(state);
+    case TURN_RESULT + NEXT_TURN:
+      return fromTurnResultToTurnState(state);
     case TURN + GO_LEFT:
       return goLeftAndStay(state);
     case TURN + GO_RIGHT:
@@ -391,6 +399,8 @@ class StationRace extends React.Component {
             </ul>
           </Keyboard>
         )}
+
+        {whenStateIs(TURN_RESULT) && <div>Nothing</div>}
 
         {whenStateIs(OVER) && (
           <Keyboard onEnter={playAgain} onShiftEnter={beginAgain}>
