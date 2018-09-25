@@ -204,8 +204,7 @@ class Keyboard extends React.Component {
   }
 
   render() {
-    const { children } = this.props;
-    return <React.Fragment>{children}</React.Fragment>;
+    return null;
   }
 }
 
@@ -240,7 +239,8 @@ const StationRace = state => {
       <h1>Station Race!</h1>
 
       {whenStateIs(BEGIN) && (
-        <Keyboard onEnter={setup}>
+        <React.Fragment>
+          <Keyboard onEnter={setup} />
           <p>If you can make sense of this game you're half way to winning.</p>
           <button className="control control-large" onClick={setup}>
             BEGIN
@@ -248,11 +248,12 @@ const StationRace = state => {
           <ul className="small-print">
             <li>Enter: begin the game.</li>
           </ul>
-        </Keyboard>
+        </React.Fragment>
       )}
 
       {whenStateIs(SETUP) && (
-        <Keyboard onEnter={start}>
+        <React.Fragment>
+          <Keyboard onEnter={start} />
           <p>
             Add at least {state.minPlayers} players to start the game.
             <br />
@@ -280,17 +281,18 @@ const StationRace = state => {
               <li>Enter: start game.</li>
             ) : null}
           </ul>
-        </Keyboard>
+        </React.Fragment>
       )}
 
       {whenStateIs(TURN) && (
-        <Keyboard
-          onEnter={next}
-          onLeft={left}
-          onRight={right}
-          onShiftLeft={first}
-          onShiftRight={last}
-        >
+        <React.Fragment>
+          <Keyboard
+            onEnter={next}
+            onLeft={left}
+            onRight={right}
+            onShiftLeft={first}
+            onShiftRight={last}
+          />
           {state.players.map(({ name, station }, i) => (
             <div key={i}>
               <code>[{isCurrentPlayer(i) ? "X" : " "}]</code>
@@ -321,11 +323,12 @@ const StationRace = state => {
             <li>Shift+RightArrow: go to last station.</li>
             <li>Enter: end your turn.</li>
           </ul>
-        </Keyboard>
+        </React.Fragment>
       )}
 
       {whenStateIs(OVER) && (
-        <Keyboard onEnter={again} onShiftEnter={beginAgain}>
+        <React.Fragment>
+          <Keyboard onEnter={again} onShiftEnter={beginAgain} />
           <p>Game Over! {state.winner.name} won the game.</p>
           <div>
             <button className="control control-large" onClick={again}>
@@ -339,7 +342,7 @@ const StationRace = state => {
             <li>Enter: play again.</li>
             <li>Shift+Enter: play a new game.</li>
           </ul>
-        </Keyboard>
+        </React.Fragment>
       )}
     </React.Fragment>
   );
