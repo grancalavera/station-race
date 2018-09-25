@@ -19,6 +19,8 @@ const withCurrentPlayer = fn => state => {
   };
 };
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const secretStation = ({ firstStation, lastStation }) =>
+  randInt(firstStation, lastStation);
 
 // Game configuration
 
@@ -46,7 +48,7 @@ const BEGIN_AGAIN = "BEGIN_AGAIN";
 
 const toBeginState = state => ({
   ...state,
-  secretStation: randInt(state.firstStation, state.lastStation),
+  secretStation: secretStation(state),
   tag: BEGIN
 });
 
@@ -76,6 +78,7 @@ const fromOverToTurnState = state => ({
   ...state,
   tag: TURN,
   currentPlayer: 0,
+  secretStation: secretStation(state),
   players: state.players.map(player => ({
     ...player,
     station: state.firstStation
