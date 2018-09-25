@@ -265,16 +265,23 @@ class StationRace extends React.Component {
     return (
       <React.Fragment>
         <h1>Station Race!</h1>
-        <p>Get off the train at the secret station to win the game.</p>
+        <blockquote>
+          Get off the train at the secret station to win the game.
+        </blockquote>
 
         {whenStateIs(BEGIN) && (
           <Keyboard onEnter={setup}>
-            <p>
-              You're in a train running from station {state.firstStation} to
-              station {state.lastStation}. There is a secret station and you
-              need to get off the train there. Be the first one to guess the
-              secret station and win the game!
-            </p>
+            <ul>
+              <li>
+                You're in a train running from station {state.firstStation} to
+                station {state.lastStation}.
+              </li>
+              <li>
+                There is a secret station and you need to get off the train
+                there. Be the first one to guess the secret station and win the
+                game!
+              </li>
+            </ul>
             <button
               className="control control-large"
               onClick={setup}
