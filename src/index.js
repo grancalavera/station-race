@@ -4,7 +4,8 @@ import "./index.css";
 
 // Utils
 
-const hasEnoughPlayers = state => state.playerCount >= state.minPlayers;
+const hasEnoughPlayers = state =>
+  Object.values(state.players).filter(Boolean).length >= state.minPlayers;
 const nextPlayer = state => (state.currentPlayer + 1) % state.players.length;
 const winner = state =>
   state.players.find(player => player.station === state.lastStation);
@@ -17,6 +18,8 @@ const withCurrentPlayer = fn => state => {
     )
   };
 };
+
+// Game configuration
 
 // States
 
@@ -40,22 +43,22 @@ const BEGIN_AGAIN = "BEGIN_AGAIN";
 
 // State transitions
 
-const toBeginState = () => ({ tag: BEGIN });
+const toBeginState = state => ({ ...state, tag: BEGIN });
 
-const fromBeginToSetupState = (minPlayers, maxPlayers) => ({
+const fromBeginToSetupState = state => ({
+  ...state,
   tag: SETUP,
-  minPlayers,
-  maxPlayers,
-  playerCount: 0,
-  players: [...Array(maxPlayers)].reduce((ps, i) => ({ ...ps, [i]: null }), {})
+  players: [...Array(state.maxPlayers)].reduce(
+    (ps, i) => ({ ...ps, [i]: null }),
+    {}
+  )
 });
 
-const fromSetupToTurnState = players => ({
+const fromSetupToTurnState = state => ({
+  ...state,
   tag: TURN,
   currentPlayer: 0,
-  firstStation: 1,
-  lastStation: 3,
-  players: Object.values(players).filter(Boolean)
+  players: Object.values(state.players).filter(Boolean)
 });
 
 const fromTurnToOverState = state => ({
@@ -64,16 +67,28 @@ const fromTurnToOverState = state => ({
   winner: winner(state)
 });
 
-const fromOverToTurnState = state => {
-  return {
-    ...state,
-    currentPlayer: 0,
-    tag: TURN,
-    players: state.players.map(player => ({ ...player, station: 1 }))
-  };
-};
+const fromOverToTurnState = state => ({
+  ...state,
+  tag: TURN,
+  currentPlayer: 0,
+  players: state.players.map(player => ({
+    ...player,
+    station: state.firstStation
+  }))
+});
 
-const fromOverToBeginState = toBeginState;
+const fromOverToBeginState = ({
+  firstStation,
+  lastStation,
+  minPlayers,
+  maxPlayers
+}) =>
+  toBeginState({
+    firstStation,
+    lastStation,
+    minPlayers,
+    maxPlayers
+  });
 
 // State identities
 
@@ -86,10 +101,9 @@ const updatePlayerAndStay = ({ i, name }, state) => {
   const invalidName = /^\s*$/.test(name);
   const players = {
     ...state.players,
-    [i]: invalidName ? null : { name, station: 1 }
+    [i]: invalidName ? null : { name, station: state.firstStation }
   };
-  const playerCount = Object.values(players).filter(Boolean).length;
-  return { ...state, players, playerCount };
+  return { ...state, players };
 };
 
 const nextPlayerAndStay = state => ({
@@ -126,12 +140,12 @@ const goLastAndStay = withCurrentPlayer((state, player) => ({
 const processInput = (state, { input, payload }) => {
   switch (state.tag + input) {
     case BEGIN + SETUP_NEW_GAME:
-      return fromBeginToSetupState(2, 4);
+      return fromBeginToSetupState(state);
     case SETUP + UPDATE_PLAYER:
       return updatePlayerAndStay(payload, state);
     case SETUP + START:
       return hasEnoughPlayers(state)
-        ? fromSetupToTurnState(state.players)
+        ? fromSetupToTurnState(state)
         : justStay(state);
     case TURN + NEXT_TURN:
       return hasWinner(state)
@@ -148,7 +162,7 @@ const processInput = (state, { input, payload }) => {
     case OVER + PLAY_AGAIN:
       return fromOverToTurnState(state);
     case OVER + BEGIN_AGAIN:
-      return fromOverToBeginState();
+      return fromOverToBeginState(state);
     default:
       justStay(state);
   }
@@ -204,7 +218,8 @@ class Keyboard extends React.Component {
   }
 
   render() {
-    return null;
+    const { children } = this.props;
+    return <React.Fragment>{children}</React.Fragment>;
   }
 }
 
@@ -237,23 +252,27 @@ const StationRace = state => {
   return (
     <React.Fragment>
       <h1>Station Race!</h1>
+      <p>Get off the train at the secret station to win the game.</p>
 
       {whenStateIs(BEGIN) && (
-        <React.Fragment>
-          <Keyboard onEnter={setup} />
-          <p>If you can make sense of this game you're half way to winning.</p>
+        <Keyboard onEnter={setup}>
+          <p>
+            You're in a train running from station {state.firstStation} to
+            station {state.lastStation}. There is a secret station and you need
+            to get off the train there. Be the first one to guess the secret
+            station and win the game!
+          </p>
           <button className="control control-large" onClick={setup}>
             BEGIN
           </button>
           <ul className="small-print">
             <li>Enter: begin the game.</li>
           </ul>
-        </React.Fragment>
+        </Keyboard>
       )}
 
       {whenStateIs(SETUP) && (
-        <React.Fragment>
-          <Keyboard onEnter={start} />
+        <Keyboard onEnter={start}>
           <p>
             Add at least {state.minPlayers} players to start the game.
             <br />
@@ -270,29 +289,26 @@ const StationRace = state => {
             </div>
           ))}
 
-          {state.playerCount >= state.minPlayers ? (
+          {hasEnoughPlayers(state) && (
             <button className="control control-large" onClick={start}>
               START
             </button>
-          ) : null}
+          )}
 
           <ul className="small-print">
-            {state.playerCount >= state.minPlayers ? (
-              <li>Enter: start game.</li>
-            ) : null}
+            {hasEnoughPlayers(state) && <li>Enter: start game.</li>}
           </ul>
-        </React.Fragment>
+        </Keyboard>
       )}
 
       {whenStateIs(TURN) && (
-        <React.Fragment>
-          <Keyboard
-            onEnter={next}
-            onLeft={left}
-            onRight={right}
-            onShiftLeft={first}
-            onShiftRight={last}
-          />
+        <Keyboard
+          onEnter={next}
+          onLeft={left}
+          onRight={right}
+          onShiftLeft={first}
+          onShiftRight={last}
+        >
           {state.players.map(({ name, station }, i) => (
             <div key={i}>
               <code>[{isCurrentPlayer(i) ? "X" : " "}]</code>
@@ -313,7 +329,7 @@ const StationRace = state => {
               {">>"}
             </button>
             <button onClick={next} className="control control-large">
-              DONE
+              GET OFF THE TRAIN!
             </button>
           </div>
           <ul className="small-print">
@@ -321,14 +337,13 @@ const StationRace = state => {
             <li>RightArrow: go to next station.</li>
             <li>Shift+LeftArrow: go to first station.</li>
             <li>Shift+RightArrow: go to last station.</li>
-            <li>Enter: end your turn.</li>
+            <li>Enter: get off the train.</li>
           </ul>
-        </React.Fragment>
+        </Keyboard>
       )}
 
       {whenStateIs(OVER) && (
-        <React.Fragment>
-          <Keyboard onEnter={again} onShiftEnter={beginAgain} />
+        <Keyboard onEnter={again} onShiftEnter={beginAgain}>
           <p>Game Over! {state.winner.name} won the game.</p>
           <div>
             <button className="control control-large" onClick={again}>
@@ -342,7 +357,7 @@ const StationRace = state => {
             <li>Enter: play again.</li>
             <li>Shift+Enter: play a new game.</li>
           </ul>
-        </React.Fragment>
+        </Keyboard>
       )}
     </React.Fragment>
   );
@@ -352,4 +367,11 @@ const el = document.getElementById("root");
 const update = state => {
   ReactDOM.render(<StationRace {...state} />, el);
 };
-update(toBeginState());
+update(
+  toBeginState({
+    firstStation: 0,
+    lastStation: 10,
+    minPlayers: 3,
+    maxPlayers: 5
+  })
+);
