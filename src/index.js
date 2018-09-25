@@ -74,7 +74,7 @@ const fromOverToBeginState = toBeginState;
 const id = x => x;
 const justStay = id;
 
-const updatePlayerAndStay = (state, { i, name }) => {
+const updatePlayerAndStay = ({ i, name }, state) => {
   const invalidName = /^\s*$/.test(name);
   const players = {
     ...state.players,
@@ -88,6 +88,15 @@ const nextPlayerAndStay = state => ({
   ...state,
   currentPlayer: nextPlayer(state)
 });
+
+const withCurrentPlayer = (fn, state) => {
+  return {
+    ...state,
+    players: state.players.map(
+      (player, i) => (i === state.currentPlayer ? fn(state, player) : player)
+    )
+  };
+};
 
 const goLeftAndStay = (state, player) =>
   player.station > state.firstStation
@@ -109,15 +118,6 @@ const goLastAndStay = (state, player) => ({
   station: state.lastStation
 });
 
-const withCurrentPlayer = (state, fn) => {
-  return {
-    ...state,
-    players: state.players.map(
-      (player, i) => (i === state.currentPlayer ? fn(state, player) : player)
-    )
-  };
-};
-
 // Input processing
 
 const processInput = (state, { input, payload }) => {
@@ -125,7 +125,7 @@ const processInput = (state, { input, payload }) => {
     case BEGIN + SETUP_NEW_GAME:
       return fromBeginToSetupState(2, 4);
     case SETUP + UPDATE_PLAYER:
-      return updatePlayerAndStay(state, payload);
+      return updatePlayerAndStay(payload, state);
     case SETUP + START:
       return hasEnoughPlayers(state)
         ? fromSetupToTurnState(state.players)
@@ -135,13 +135,13 @@ const processInput = (state, { input, payload }) => {
         ? fromTurnToOverState(state)
         : nextPlayerAndStay(state);
     case TURN + GO_LEFT:
-      return withCurrentPlayer(state, goLeftAndStay);
+      return withCurrentPlayer(goLeftAndStay, state);
     case TURN + GO_RIGHT:
-      return withCurrentPlayer(state, goRightAndStay);
+      return withCurrentPlayer(goRightAndStay, state);
     case TURN + GO_FIRST:
-      return withCurrentPlayer(state, goFirstAndStay);
+      return withCurrentPlayer(goFirstAndStay, state);
     case TURN + GO_LAST:
-      return withCurrentPlayer(state, goLastAndStay);
+      return withCurrentPlayer(goLastAndStay, state);
     case OVER + PLAY_AGAIN:
       return fromOverToTurnState(state);
     case OVER + BEGIN_AGAIN:
