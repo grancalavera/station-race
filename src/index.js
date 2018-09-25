@@ -69,6 +69,11 @@ const fromOverToBeginState = toBeginState;
 
 // State identities
 
+// just for clarity
+// justStay(state) === state
+const id = x => x;
+const justStay = id;
+
 const updatePlayerAndStay = (state, { i, name }) => {
   const invalidName = /^\s*$/.test(name);
   const players = {
@@ -116,33 +121,33 @@ const withCurrentPlayer = (state, fn) => {
 // Input processing
 
 const processInput = (state, { input, payload }) => {
-  switch (input) {
-    case SETUP_NEW_GAME:
+  switch (state.tag + input) {
+    case BEGIN + SETUP_NEW_GAME:
       return fromBeginToSetupState(2, 4);
-    case UPDATE_PLAYER:
+    case SETUP + UPDATE_PLAYER:
       return updatePlayerAndStay(state, payload);
-    case START:
+    case SETUP + START:
       return hasEnoughPlayers(state)
         ? fromSetupToTurnState(state.players)
-        : state;
-    case NEXT_TURN:
+        : justStay(state);
+    case TURN + NEXT_TURN:
       return hasWinner(state)
         ? fromTurnToOverState(state)
         : nextPlayerAndStay(state);
-    case GO_LEFT:
+    case TURN + GO_LEFT:
       return withCurrentPlayer(state, goLeftAndStay);
-    case GO_RIGHT:
+    case TURN + GO_RIGHT:
       return withCurrentPlayer(state, goRightAndStay);
-    case GO_FIRST:
+    case TURN + GO_FIRST:
       return withCurrentPlayer(state, goFirstAndStay);
-    case GO_LAST:
+    case TURN + GO_LAST:
       return withCurrentPlayer(state, goLastAndStay);
-    case PLAY_AGAIN:
+    case OVER + PLAY_AGAIN:
       return fromOverToTurnState(state);
-    case BEGIN_AGAIN:
+    case OVER + BEGIN_AGAIN:
       return fromOverToBeginState();
     default:
-      return state;
+      justStay(state);
   }
 };
 
