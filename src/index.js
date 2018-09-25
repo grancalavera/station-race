@@ -8,7 +8,7 @@ const hasEnoughPlayers = state =>
   Object.values(state.players).filter(Boolean).length >= state.minPlayers;
 const nextPlayer = state => (state.currentPlayer + 1) % state.players.length;
 const winner = state =>
-  state.players.find(player => player.station === state.lastStation);
+  state.players.find(player => player.station === state.secretStation);
 const hasWinner = state => !!winner(state);
 const withCurrentPlayer = fn => state => {
   return {
@@ -18,6 +18,7 @@ const withCurrentPlayer = fn => state => {
     )
   };
 };
+const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 // Game configuration
 
@@ -43,7 +44,11 @@ const BEGIN_AGAIN = "BEGIN_AGAIN";
 
 // State transitions
 
-const toBeginState = state => ({ ...state, tag: BEGIN });
+const toBeginState = state => ({
+  ...state,
+  secretStation: randInt(state.firstStation, state.lastStation),
+  tag: BEGIN
+});
 
 const fromBeginToSetupState = state => ({
   ...state,
@@ -247,6 +252,7 @@ class StationRace extends React.Component {
   render() {
     const state = this.state;
     const whenStateIs = tag => state.tag === tag;
+    const whenStateIsNot = tag => !whenStateIs(tag);
     const isCurrentPlayer = i => state.currentPlayer === i;
     const sendInput = (input, payload) =>
       this.setState(processInput(state, { input, payload }));
@@ -265,9 +271,12 @@ class StationRace extends React.Component {
     return (
       <React.Fragment>
         <h1>Station Race!</h1>
-        <blockquote>
-          Get off the train at the secret station to win the game.
-        </blockquote>
+
+        {whenStateIsNot(OVER) && (
+          <blockquote>
+            Get off the train at the secret station to win the game.
+          </blockquote>
+        )}
 
         {whenStateIs(BEGIN) && (
           <Keyboard onEnter={setup}>
@@ -376,7 +385,9 @@ class StationRace extends React.Component {
 
         {whenStateIs(OVER) && (
           <Keyboard onEnter={again} onShiftEnter={beginAgain}>
-            <p>Game Over! {state.winner.name} won the game.</p>
+            <h2>Game Over!</h2>
+            <p>{state.winner.name} won the game.</p>
+            <p>The secret station was station {state.secretStation}.</p>
             <div>
               <button
                 className="control control-large"
@@ -406,10 +417,10 @@ class StationRace extends React.Component {
 
 ReactDOM.render(
   <StationRace
-    firstStation={0}
-    lastStation={10}
-    minPlayers={3}
-    maxPlayers={5}
+    firstStation={1}
+    lastStation={5}
+    minPlayers={2}
+    maxPlayers={4}
   />,
   document.getElementById("root")
 );
