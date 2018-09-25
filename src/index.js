@@ -29,6 +29,7 @@ const secretStation = ({ firstStation, lastStation }) =>
 const BEGIN = "BEGIN";
 const SETUP = "SETUP";
 const TURN = "TURN";
+const TURN_RESULT = "TURN";
 const OVER = "OVER";
 
 // Inputs
@@ -36,6 +37,7 @@ const OVER = "OVER";
 const SETUP_NEW_GAME = "SETUP_NEW_GAME";
 const UPDATE_PLAYER = "UPDATE_PLAYER";
 const START = "START";
+const GET_OFF_THE_TRAIN = "GET_OFF_THE_TRAIN";
 const NEXT_TURN = "NEXT_TURN";
 const GO_LEFT = "GO_LEFT";
 const GO_RIGHT = "GO_RIGHT";
@@ -155,7 +157,7 @@ const processInput = (state, { input, payload }) => {
       return hasEnoughPlayers(state)
         ? fromSetupToTurnState(state)
         : justStay(state);
-    case TURN + NEXT_TURN:
+    case TURN + GET_OFF_THE_TRAIN:
       return hasWinner(state)
         ? fromTurnToOverState(state)
         : nextPlayerAndStay(state);
@@ -254,20 +256,24 @@ class StationRace extends React.Component {
   }
   render() {
     const state = this.state;
+
+    // Utils
     const whenStateIs = tag => state.tag === tag;
     const whenStateIsNot = tag => !whenStateIs(tag);
     const isCurrentPlayer = i => state.currentPlayer === i;
     const sendInput = (input, payload) =>
       this.setState(processInput(state, { input, payload }));
-    const setup = () => sendInput(SETUP_NEW_GAME);
+
+    // Inputs
+    const setupNewGame = () => sendInput(SETUP_NEW_GAME);
     const beginAgain = () => sendInput(BEGIN_AGAIN);
     const start = () => sendInput(START);
-    const again = () => sendInput(PLAY_AGAIN);
-    const next = () => sendInput(NEXT_TURN);
-    const left = () => sendInput(GO_LEFT);
-    const right = () => sendInput(GO_RIGHT);
-    const first = () => sendInput(GO_FIRST);
-    const last = () => sendInput(GO_LAST);
+    const playAgain = () => sendInput(PLAY_AGAIN);
+    const getOffTheTrain = () => sendInput(GET_OFF_THE_TRAIN);
+    const goLeft = () => sendInput(GO_LEFT);
+    const goRight = () => sendInput(GO_RIGHT);
+    const goFirst = () => sendInput(GO_FIRST);
+    const goLast = () => sendInput(GO_LAST);
     const updatePlayer = i => e =>
       sendInput(UPDATE_PLAYER, { i, name: e.target.value });
 
@@ -282,7 +288,7 @@ class StationRace extends React.Component {
         )}
 
         {whenStateIs(BEGIN) && (
-          <Keyboard onEnter={setup}>
+          <Keyboard onEnter={setupNewGame}>
             <ul>
               <li>
                 You're in a train running from station {state.firstStation} to
@@ -290,13 +296,13 @@ class StationRace extends React.Component {
               </li>
               <li>
                 There is a secret station and you need to get off the train
-                there. Be the first one to guess the secret station and win the
-                game!
+                there. Be the goFirst one to guess the secret station and win
+                the game!
               </li>
             </ul>
             <button
               className="control control-large"
-              onClick={setup}
+              onClick={setupNewGame}
               tabIndex={-1}
             >
               BEGIN
@@ -343,11 +349,11 @@ class StationRace extends React.Component {
 
         {whenStateIs(TURN) && (
           <Keyboard
-            onEnter={next}
-            onLeft={left}
-            onRight={right}
-            onShiftLeft={first}
-            onShiftRight={last}
+            onEnter={getOffTheTrain}
+            onLeft={goLeft}
+            onRight={goRight}
+            onShiftLeft={goFirst}
+            onShiftRight={goLast}
           >
             {state.players.map(({ name, station }, i) => (
               <div key={i}>
@@ -356,20 +362,20 @@ class StationRace extends React.Component {
               </div>
             ))}
             <div className="control-bar">
-              <button onClick={first} className="control" tabIndex={-1}>
+              <button onClick={goFirst} className="control" tabIndex={-1}>
                 {"<<"}
               </button>
-              <button onClick={left} className="control" tabIndex={-1}>
+              <button onClick={goLeft} className="control" tabIndex={-1}>
                 {"<"}
               </button>
-              <button onClick={right} className="control" tabIndex={-1}>
+              <button onClick={goRight} className="control" tabIndex={-1}>
                 {">"}
               </button>
-              <button onClick={last} className="control" tabIndex={-1}>
+              <button onClick={goLast} className="control" tabIndex={-1}>
                 {">>"}
               </button>
               <button
-                onClick={next}
+                onClick={getOffTheTrain}
                 className="control control-large"
                 tabIndex={-1}
               >
@@ -378,23 +384,23 @@ class StationRace extends React.Component {
             </div>
             <ul className="small-print">
               <li>LeftArrow: go to previous station.</li>
-              <li>RightArrow: go to next station.</li>
-              <li>Shift+LeftArrow: go to first station.</li>
-              <li>Shift+RightArrow: go to last station.</li>
+              <li>RightArrow: go to getOffTheTrain station.</li>
+              <li>Shift+LeftArrow: go to goFirst station.</li>
+              <li>Shift+RightArrow: go to goLast station.</li>
               <li>Enter: get off the train.</li>
             </ul>
           </Keyboard>
         )}
 
         {whenStateIs(OVER) && (
-          <Keyboard onEnter={again} onShiftEnter={beginAgain}>
+          <Keyboard onEnter={playAgain} onShiftEnter={beginAgain}>
             <h2>Game Over!</h2>
             <p>{state.winner.name} won the game.</p>
             <p>The secret station was station {state.secretStation}.</p>
             <div>
               <button
                 className="control control-large"
-                onClick={again}
+                onClick={playAgain}
                 tabIndex={-1}
               >
                 PLAY AGAIN
@@ -408,7 +414,7 @@ class StationRace extends React.Component {
               </button>
             </div>
             <ul className="small-print">
-              <li>Enter: play again.</li>
+              <li>Enter: play playAgain.</li>
               <li>Shift+Enter: play a new game.</li>
             </ul>
           </Keyboard>
