@@ -243,8 +243,7 @@ class Keyboard extends React.Component {
   }
 
   render() {
-    const { children } = this.props;
-    return <React.Fragment>{children}</React.Fragment>;
+    return null;
   }
 }
 
@@ -296,7 +295,8 @@ class StationRace extends React.Component {
         )}
 
         {whenStateIs(BEGIN) && (
-          <Keyboard onEnter={setupNewGame}>
+          <React.Fragment>
+            <Keyboard onEnter={setupNewGame} />
             <ul>
               <li>
                 You're in a train running from station {state.firstStation} to
@@ -318,11 +318,12 @@ class StationRace extends React.Component {
             <ul className="small-print">
               <li>Enter: begin the game.</li>
             </ul>
-          </Keyboard>
+          </React.Fragment>
         )}
 
         {whenStateIs(SETUP) && (
-          <Keyboard onEnter={start}>
+          <React.Fragment>
+            <Keyboard onEnter={start} />
             <p>
               Add at least {state.minPlayers} players to start the game.
               <br />
@@ -352,17 +353,18 @@ class StationRace extends React.Component {
             <ul className="small-print">
               {hasEnoughPlayers(state) && <li>Enter: start game.</li>}
             </ul>
-          </Keyboard>
+          </React.Fragment>
         )}
 
         {whenStateIs(TURN) && (
-          <Keyboard
-            onEnter={getOffTheTrain}
-            onLeft={goLeft}
-            onRight={goRight}
-            onShiftLeft={goFirst}
-            onShiftRight={goLast}
-          >
+          <React.Fragment>
+            <Keyboard
+              onEnter={getOffTheTrain}
+              onLeft={goLeft}
+              onRight={goRight}
+              onShiftLeft={goFirst}
+              onShiftRight={goLast}
+            />
             {state.players.map(({ name, station }, i) => (
               <div key={i}>
                 <code>[{isCurrentPlayer(i) ? "X" : " "}]</code>
@@ -397,13 +399,14 @@ class StationRace extends React.Component {
               <li>Shift+RightArrow: go to goLast station.</li>
               <li>Enter: get off the train.</li>
             </ul>
-          </Keyboard>
+          </React.Fragment>
         )}
 
         {whenStateIs(TURN_RESULT) && <div>Nothing</div>}
 
         {whenStateIs(OVER) && (
-          <Keyboard onEnter={playAgain} onShiftEnter={beginAgain}>
+          <React.Fragment>
+            <Keyboard onEnter={playAgain} onShiftEnter={beginAgain} />
             <h2>Game Over!</h2>
             <p>{state.winner.name} won the game.</p>
             <p>The secret station was station {state.secretStation}.</p>
@@ -427,7 +430,7 @@ class StationRace extends React.Component {
               <li>Enter: play playAgain.</li>
               <li>Shift+Enter: play a new game.</li>
             </ul>
-          </Keyboard>
+          </React.Fragment>
         )}
       </React.Fragment>
     );
