@@ -449,6 +449,7 @@ class StationRace extends React.Component {
             </ul>
           </React.Fragment>
         )}
+        {/* <pre>{JSON.stringify(state, null, 2)}</pre> */}
       </React.Fragment>
     );
   }
@@ -463,3 +464,8 @@ ReactDOM.render(
   />,
   document.getElementById("root")
 );
+
+// todo
+// better rendering for current player: make a box for each player and
+//  highilight the current one
+// render each station separately and show progress graphically
