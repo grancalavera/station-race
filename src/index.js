@@ -3,7 +3,6 @@ import ReactDOM from "react-dom";
 import "./index.css";
 
 // Utils
-
 const hasEnoughPlayers = state =>
   Object.values(state.players).filter(Boolean).length >= state.minPlayers;
 const currentPlayer = state => state.players[state.currentPlayer];
@@ -22,11 +21,22 @@ const withCurrentPlayer = fn => state => {
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 const secretStation = ({ firstStation, lastStation }) =>
   randInt(firstStation, lastStation);
+const stations = ({ firstStation, lastStation }) =>
+  [...Array(lastStation - firstStation + 1)].map((_, i) => firstStation + i);
+const recoverInitialState = ({
+  firstStation,
+  lastStation,
+  minPlayers,
+  maxPlayers
+}) => ({
+  firstStation,
+  lastStation,
+  minPlayers,
+  maxPlayers
+});
 
 // Game configuration
-
 // States
-
 const BEGIN = "BEGIN";
 const SETUP = "SETUP";
 const TURN = "TURN";
@@ -34,7 +44,6 @@ const TURN_RESULT = "TURN_RESULT";
 const OVER = "OVER";
 
 // Inputs
-
 const SETUP_NEW_GAME = "SETUP_NEW_GAME";
 const UPDATE_PLAYER = "UPDATE_PLAYER";
 const START = "START";
@@ -48,7 +57,6 @@ const PLAY_AGAIN = "PLAY_AGAIN";
 const BEGIN_AGAIN = "BEGIN_AGAIN";
 
 // State transitions
-
 const toBeginState = state => ({
   ...state,
   secretStation: secretStation(state),
@@ -89,7 +97,7 @@ const fromTurnToOverState = state => ({
 });
 
 const fromOverToTurnState = state => ({
-  ...state,
+  ...recoverInitialState(state),
   tag: TURN,
   currentPlayer: 0,
   secretStation: secretStation(state),
@@ -99,23 +107,11 @@ const fromOverToTurnState = state => ({
   }))
 });
 
-const fromOverToBeginState = ({
-  firstStation,
-  lastStation,
-  minPlayers,
-  maxPlayers
-}) =>
-  toBeginState({
-    firstStation,
-    lastStation,
-    minPlayers,
-    maxPlayers
-  });
+const fromOverToBeginState = state => toBeginState(recoverInitialState(state));
 
 // State identities
 
-// just for clarity
-// stay(state) === state
+// just for clarity: stay(state) === state
 const id = x => x;
 const stay = id;
 
@@ -269,8 +265,16 @@ class StationRace extends React.Component {
     const whenStateIs = tag => state.tag === tag;
     const whenStateIsNot = tag => !whenStateIs(tag);
     const isCurrentPlayer = i => state.currentPlayer === i;
-    const sendInput = (input, payload) =>
-      this.setState(processInput(state, { input, payload }));
+    const sendInput = (input, payload) => {
+      const addedState = processInput(state, { input, payload });
+      const newKeys = Object.keys(addedState);
+      const removedState = Object.keys(this.state).reduce(
+        (rm, key) =>
+          !newKeys.includes(key) ? { ...rm, [key]: undefined } : rm,
+        {}
+      );
+      this.setState({ ...removedState, ...addedState });
+    };
 
     // Inputs
     const setupNewGame = () => sendInput(SETUP_NEW_GAME);
@@ -306,17 +310,21 @@ class StationRace extends React.Component {
               </li>
               <li>
                 There is a secret station and you need to get off the train
-                there. Be the goFirst one to guess the secret station and win
-                the game!
+                there.
+              </li>
+              <li>
+                Be the first one to guess the secret station and win the game!
               </li>
             </ul>
-            <button
-              className="control control-large"
-              onClick={setupNewGame}
-              tabIndex={-1}
-            >
-              BEGIN
-            </button>
+            <div className="control-bar">
+              <button
+                className="control control-large"
+                onClick={setupNewGame}
+                tabIndex={-1}
+              >
+                BEGIN
+              </button>
+            </div>
             <ul className="small-print">
               <li>Enter: begin the game.</li>
             </ul>
@@ -326,12 +334,12 @@ class StationRace extends React.Component {
         {whenStateIs(SETUP) && (
           <React.Fragment>
             <Keyboard onEnter={start} />
-            <p>
-              Add at least {state.minPlayers} players to start the game.
-              <br />
-              You can add up to {state.maxPlayers} players.
-            </p>
-
+            <ul>
+              <li>
+                Add at least {state.minPlayers} players to start the game.
+              </li>
+              <li>You can add up to {state.maxPlayers} players.</li>
+            </ul>
             {[...Array(state.maxPlayers)].map((_, i) => (
               <div key={i} className="editor">
                 {i + 1}:{" "}
@@ -343,13 +351,15 @@ class StationRace extends React.Component {
             ))}
 
             {hasEnoughPlayers(state) && (
-              <button
-                className="control control-large"
-                onClick={start}
-                tabIndex={-1}
-              >
-                START
-              </button>
+              <div className="control-bar">
+                <button
+                  className="control control-large"
+                  onClick={start}
+                  tabIndex={-1}
+                >
+                  START
+                </button>
+              </div>
             )}
 
             <ul className="small-print">
@@ -358,66 +368,120 @@ class StationRace extends React.Component {
           </React.Fragment>
         )}
 
-        {whenStateIs(TURN) && (
+        {(whenStateIs(TURN) || whenStateIs(TURN_RESULT)) && (
           <React.Fragment>
-            <Keyboard
-              onEnter={getOffTheTrain}
-              onLeft={goLeft}
-              onRight={goRight}
-              onShiftLeft={goFirst}
-              onShiftRight={goLast}
-            />
+            {/* from this point onwards is always either TURN or TURN_RESULT */}
+            {whenStateIs(TURN) ? (
+              <Keyboard
+                onEnter={getOffTheTrain}
+                onLeft={goLeft}
+                onRight={goRight}
+                onShiftLeft={goFirst}
+                onShiftRight={goLast}
+              />
+            ) : (
+              <Keyboard onEnter={nextTurn} />
+            )}
             {state.players.map(({ name, station }, i) => (
-              <div key={i}>
-                <code>[{isCurrentPlayer(i) ? "X" : " "}]</code>
-                {name} is at station {station}
+              <div
+                key={i}
+                className={
+                  isCurrentPlayer(i) ? "player player-current" : "player"
+                }
+              >
+                <p>
+                  {name} is at station {station}
+                </p>
+                <div className="stations">
+                  {stations(state).map(someStation => (
+                    <code
+                      key={`station-${someStation}`}
+                      className={
+                        station === someStation
+                          ? "station station-current"
+                          : "station"
+                      }
+                    >
+                      {someStation}
+                      :[
+                      {station === someStation ? "X" : " "}]
+                    </code>
+                  ))}
+                </div>
+
+                {whenStateIs(TURN) &&
+                  isCurrentPlayer(i) && (
+                    <div className="control-bar">
+                      <button
+                        onClick={goFirst}
+                        className="control"
+                        tabIndex={-1}
+                      >
+                        {"<<"}
+                      </button>
+                      <button
+                        onClick={goLeft}
+                        className="control"
+                        tabIndex={-1}
+                      >
+                        {"<"}
+                      </button>
+                      <button
+                        onClick={goRight}
+                        className="control"
+                        tabIndex={-1}
+                      >
+                        {">"}
+                      </button>
+                      <button
+                        onClick={goLast}
+                        className="control"
+                        tabIndex={-1}
+                      >
+                        {">>"}
+                      </button>
+                      <button
+                        onClick={getOffTheTrain}
+                        className="control control-large"
+                        tabIndex={-1}
+                      >
+                        GET OFF THE TRAIN!
+                      </button>
+                    </div>
+                  )}
+                {whenStateIs(TURN_RESULT) &&
+                  isCurrentPlayer(i) && (
+                    <React.Fragment>
+                      <p className="error">
+                        {currentPlayer(state).station < state.secretStation
+                          ? "You got off the train too early!"
+                          : "You got off the train too late!"}
+                      </p>
+                      <div className="control-bar">
+                        <button
+                          className="control control-large"
+                          onClick={nextTurn}
+                        >
+                          NEXT PLAYER
+                        </button>
+                      </div>
+                    </React.Fragment>
+                  )}
               </div>
             ))}
-            <div className="control-bar">
-              <button onClick={goFirst} className="control" tabIndex={-1}>
-                {"<<"}
-              </button>
-              <button onClick={goLeft} className="control" tabIndex={-1}>
-                {"<"}
-              </button>
-              <button onClick={goRight} className="control" tabIndex={-1}>
-                {">"}
-              </button>
-              <button onClick={goLast} className="control" tabIndex={-1}>
-                {">>"}
-              </button>
-              <button
-                onClick={getOffTheTrain}
-                className="control control-large"
-                tabIndex={-1}
-              >
-                GET OFF THE TRAIN!
-              </button>
-            </div>
             <ul className="small-print">
-              <li>LeftArrow: go to previous station.</li>
-              <li>RightArrow: go to getOffTheTrain station.</li>
-              <li>Shift+LeftArrow: go to goFirst station.</li>
-              <li>Shift+RightArrow: go to goLast station.</li>
-              <li>Enter: get off the train.</li>
+              {whenStateIs(TURN) ? (
+                <React.Fragment>
+                  <li>LeftArrow: go to previous station.</li>
+                  <li>RightArrow: go to getOffTheTrain station.</li>
+                  <li>Shift+LeftArrow: go to goFirst station.</li>
+                  <li>Shift+RightArrow: go to goLast station.</li>
+                  <li>Enter: get off the train.</li>
+                </React.Fragment>
+              ) : (
+                <li>Enter: Next player.</li>
+              )}
             </ul>
-          </React.Fragment>
-        )}
-
-        {whenStateIs(TURN_RESULT) && (
-          <React.Fragment>
-            <Keyboard onEnter={nextTurn} />
-            <p>
-              Sorry {currentPlayer(state).name}, that's not the secret station.
-            </p>
-            <p>
-              {currentPlayer(state).station < state.secretStation
-                ? "You got off the train too early!"
-                : "You got off the train too late!"}
-            </p>
-            <button className="control control-large" onClick={nextTurn}>
-              NEXT PLAYER
-            </button>
           </React.Fragment>
         )}
 
@@ -427,7 +491,7 @@ class StationRace extends React.Component {
             <h2>Game Over!</h2>
             <p>{state.winner.name} won the game.</p>
             <p>The secret station was station {state.secretStation}.</p>
-            <div>
+            <div className="control-bar">
               <button
                 className="control control-large"
                 onClick={playAgain}
@@ -458,14 +522,9 @@ class StationRace extends React.Component {
 ReactDOM.render(
   <StationRace
     firstStation={1}
-    lastStation={2}
+    lastStation={7}
     minPlayers={2}
-    maxPlayers={2}
+    maxPlayers={4}
   />,
   document.getElementById("root")
 );
-
-// todo
-// better rendering for current player: make a box for each player and
-//  highilight the current one
-// render each station separately and show progress graphically

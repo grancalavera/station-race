@@ -1,13 +1,54 @@
+* {
+  font-family: monospace;
+}
+
+blockquote {
+  font-style: italic;
+  font-weight: bold;
+  border: 4px solid lightgray;
+  padding: 2em;
+  text-align: center;
+  margin-left: 0;
+  margin-right: 0;
+  background-color: #eeeeee;
+  color: gray;
+}
+
 .control-bar {
   margin-top: 1em;
   height: 44px;
-  display: table;
 }
 
 .control-bar .control {
   display: table-cell;
   vertical-align: middle;
 }
+
+.player {
+  border: 4px solid lightgray;
+  margin-bottom: 0.5em;
+  padding: 0.5em;
+  color: lightgray;
+  background-color: white;
+}
+
+.player.player-current {
+  border-color: black;
+  color: black;
+  background-color: #eeeeee;
+}
+
+.station {
+  color: lightgray;
+  margin-right: 0.5em;
+}
+
+.station.station-current {
+  color: black;
+  <metaname="viewport" content="initial-scale=1, maximum-scale=1">
+  font-weight: bold;
+}
+
 .control {
   width: 44px;
   height: 44px;
