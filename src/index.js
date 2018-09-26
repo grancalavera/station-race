@@ -58,7 +58,7 @@ const fromBeginToSetupState = state => ({
   ...state,
   tag: SETUP,
   players: [...Array(state.maxPlayers)].reduce(
-    (ps, i) => ({ ...ps, [i]: null }),
+    (ps, _, i) => ({ ...ps, [i]: null }),
     {}
   )
 });
