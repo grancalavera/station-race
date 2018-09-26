@@ -6,6 +6,7 @@ import "./index.css";
 
 const hasEnoughPlayers = state =>
   Object.values(state.players).filter(Boolean).length >= state.minPlayers;
+const currentPlayer = state => state.players[state.currentPlayer];
 const nextPlayer = state => (state.currentPlayer + 1) % state.players.length;
 const winner = state =>
   state.players.find(player => player.station === state.secretStation);
@@ -277,6 +278,7 @@ class StationRace extends React.Component {
     const start = () => sendInput(START);
     const playAgain = () => sendInput(PLAY_AGAIN);
     const getOffTheTrain = () => sendInput(GET_OFF_THE_TRAIN);
+    const nextTurn = () => sendInput(NEXT_TURN);
     const goLeft = () => sendInput(GO_LEFT);
     const goRight = () => sendInput(GO_RIGHT);
     const goFirst = () => sendInput(GO_FIRST);
@@ -402,7 +404,22 @@ class StationRace extends React.Component {
           </React.Fragment>
         )}
 
-        {whenStateIs(TURN_RESULT) && <div>Nothing</div>}
+        {whenStateIs(TURN_RESULT) && (
+          <React.Fragment>
+            <Keyboard onEnter={nextTurn} />
+            <p>
+              Sorry {currentPlayer(state).name}, that's not the secret station.
+            </p>
+            <p>
+              {currentPlayer(state).station < state.secretStation
+                ? "You got off the train too early!"
+                : "You got off the train too late!"}
+            </p>
+            <button className="control control-large" onClick={nextTurn}>
+              NEXT PLAYER
+            </button>
+          </React.Fragment>
+        )}
 
         {whenStateIs(OVER) && (
           <React.Fragment>
