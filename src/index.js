@@ -78,7 +78,7 @@ const fromTurnToTurnResultState = state => ({
 const fromTurnResultToTurnState = state => ({
   ...state,
   tag: TURN,
-  player: nextPlayer(state)
+  currentPlayer: nextPlayer(state)
 });
 
 const fromTurnToOverState = state => ({
