@@ -5,7 +5,7 @@
 blockquote {
   font-style: italic;
   font-weight: bold;
-  border: 4px solid lightgray;
+  border: 1px solid lightgray;
   padding: 2em;
   text-align: center;
   margin-left: 0;
@@ -25,7 +25,7 @@ blockquote {
 }
 
 .player {
-  border: 4px solid lightgray;
+  border: 1px solid lightgray;
   margin-bottom: 0.5em;
   padding: 0.5em;
   color: lightgray;
@@ -45,7 +45,6 @@ blockquote {
 
 .station.station-current {
   color: black;
-  <metaname="viewport" content="initial-scale=1, maximum-scale=1">
   font-weight: bold;
 }
 
@@ -68,7 +67,7 @@ blockquote {
 
 .error {
   color: red;
-  border: 2px solid red;
+  border: 1px solid red;
   padding: 1em;
   font-weight: bold;
   background-color: lightpink;
