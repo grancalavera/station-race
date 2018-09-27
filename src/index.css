@@ -81,3 +81,9 @@ blockquote {
   height: 44px;
   margin-right: 0.5em;
 }
+
+@media screen and (max-width: 800px) {
+  .small-print {
+    display: none;
+  }
+}
