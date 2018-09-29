@@ -1,5 +1,5 @@
 import React from "react";
-import { pick, identity, pipe, not } from "ramda";
+import { pick, identity, pipe, not, equals } from "ramda";
 import ReactDOM from "react-dom";
 import "./index.css";
 
@@ -159,12 +159,6 @@ const processInput = (state, { input, payload }) => {
       return hasEnoughPlayers(state)
         ? fromSetupToTurnState(state)
         : stay(state);
-    case TURN + GET_OFF_THE_TRAIN:
-      return hasWinner(state)
-        ? fromTurnToOverState(state)
-        : fromTurnToTurnResultState(state);
-    case TURN_RESULT + NEXT_TURN:
-      return fromTurnResultToTurnState(state);
     case TURN + GO_LEFT:
       return goLeftAndStay(state);
     case TURN + GO_RIGHT:
@@ -173,6 +167,12 @@ const processInput = (state, { input, payload }) => {
       return goFirstAndStay(state);
     case TURN + GO_LAST:
       return goLastAndStay(state);
+    case TURN + GET_OFF_THE_TRAIN:
+      return hasWinner(state)
+        ? fromTurnToOverState(state)
+        : fromTurnToTurnResultState(state);
+    case TURN_RESULT + NEXT_TURN:
+      return fromTurnResultToTurnState(state);
     case OVER + PLAY_AGAIN:
       return fromOverToTurnState(state);
     case OVER + BEGIN_AGAIN:
@@ -261,12 +261,12 @@ class StationRace extends React.Component {
     const state = this.state;
 
     // Utils
-    const whenStateIs = tag => state.tag === tag;
+    const whenStateIs = equals(state.tag);
     const whenStateIsNot = pipe(
       whenStateIs,
       not
     );
-    const isCurrentPlayer = i => state.currentPlayer === i;
+    const isCurrentPlayer = equals(state.currentPlayer);
     const sendInput = (input, payload) => {
       const addedState = processInput(state, { input, payload });
       const newKeys = Object.keys(addedState);
