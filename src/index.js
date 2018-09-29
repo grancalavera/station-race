@@ -1,8 +1,10 @@
 import React from "react";
+import { pick } from "ramda";
 import ReactDOM from "react-dom";
 import "./index.css";
 
 // Utils
+
 const hasEnoughPlayers = state =>
   Object.values(state.players).filter(Boolean).length >= state.minPlayers;
 const currentPlayer = state => state.players[state.currentPlayer];
@@ -23,17 +25,13 @@ const secretStation = ({ firstStation, lastStation }) =>
   randInt(firstStation, lastStation);
 const stations = ({ firstStation, lastStation }) =>
   [...Array(lastStation - firstStation + 1)].map((_, i) => firstStation + i);
-const recoverInitialState = ({
-  firstStation,
-  lastStation,
-  minPlayers,
-  maxPlayers
-}) => ({
-  firstStation,
-  lastStation,
-  minPlayers,
-  maxPlayers
-});
+
+const recoverInitialState = pick([
+  "firstStation",
+  "lastStation",
+  "minPlayers",
+  "maxPlayers"
+]);
 
 // Game configuration
 // States
@@ -342,7 +340,7 @@ class StationRace extends React.Component {
             </ul>
             {[...Array(state.maxPlayers)].map((_, i) => (
               <div key={i} className="editor">
-                {i + 1}:{" "}
+                <div className="piece" />
                 <input
                   value={state.players[i] ? state.players[i].name : ""}
                   onChange={updatePlayer(i)}
