@@ -1,12 +1,13 @@
 import React from "react";
-import { pick } from "ramda";
+import { pick, identity, pipe, not } from "ramda";
 import ReactDOM from "react-dom";
 import "./index.css";
 
 // Utils
 
 const hasEnoughPlayers = state =>
-  Object.values(state.players).filter(Boolean).length >= state.minPlayers;
+  Object.values(state.registeredPlayers).filter(Boolean).length >=
+  state.minPlayers;
 const currentPlayer = state => state.players[state.currentPlayer];
 const nextPlayer = state => (state.currentPlayer + 1) % state.players.length;
 const winner = state =>
@@ -21,17 +22,20 @@ const withCurrentPlayer = fn => state => {
   };
 };
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-const secretStation = ({ firstStation, lastStation }) =>
+const makeSecretStation = ({ firstStation, lastStation }) =>
   randInt(firstStation, lastStation);
 const stations = ({ firstStation, lastStation }) =>
   [...Array(lastStation - firstStation + 1)].map((_, i) => firstStation + i);
 
-const recoverInitialState = pick([
+const configuration = pick([
   "firstStation",
   "lastStation",
   "minPlayers",
-  "maxPlayers"
+  "maxPlayers",
+  "makeSecretStation"
 ]);
+
+const setup = pick(["registeredPlayers"]);
 
 // Game configuration
 // States
@@ -43,7 +47,7 @@ const OVER = "OVER";
 
 // Inputs
 const SETUP_NEW_GAME = "SETUP_NEW_GAME";
-const UPDATE_PLAYER = "UPDATE_PLAYER";
+const REGISTER_PLAYER = "REGISTER_PLAYER";
 const START = "START";
 const GET_OFF_THE_TRAIN = "GET_OFF_THE_TRAIN";
 const NEXT_TURN = "NEXT_TURN";
@@ -56,26 +60,31 @@ const BEGIN_AGAIN = "BEGIN_AGAIN";
 
 // State transitions
 const toBeginState = state => ({
-  ...state,
-  secretStation: secretStation(state),
+  ...configuration(state),
   tag: BEGIN
 });
 
 const fromBeginToSetupState = state => ({
   ...state,
   tag: SETUP,
-  players: [...Array(state.maxPlayers)].reduce(
+  registeredPlayers: [...Array(state.maxPlayers)].reduce(
     (ps, _, i) => ({ ...ps, [i]: null }),
     {}
   )
 });
 
-const fromSetupToTurnState = state => ({
-  ...state,
+const toTurnState = state => ({
+  ...configuration(state),
+  ...setup(state),
   tag: TURN,
   currentPlayer: 0,
-  players: Object.values(state.players).filter(Boolean)
+  secretStation: state.makeSecretStation(state),
+  players: Object.values(state.registeredPlayers)
+    .filter(Boolean)
+    .map(name => ({ name, station: state.firstStation }))
 });
+
+const fromSetupToTurnState = toTurnState;
 
 const fromTurnToTurnResultState = state => ({
   ...state,
@@ -89,37 +98,29 @@ const fromTurnResultToTurnState = state => ({
 });
 
 const fromTurnToOverState = state => ({
-  ...state,
+  ...configuration(state),
+  ...setup(state),
   tag: OVER,
   winner: winner(state)
 });
 
-const fromOverToTurnState = state => ({
-  ...recoverInitialState(state),
-  tag: TURN,
-  currentPlayer: 0,
-  secretStation: secretStation(state),
-  players: state.players.map(player => ({
-    ...player,
-    station: state.firstStation
-  }))
-});
-
-const fromOverToBeginState = state => toBeginState(recoverInitialState(state));
+const fromOverToTurnState = toTurnState;
+const fromOverToBeginState = toBeginState;
 
 // State identities
 
 // just for clarity: stay(state) === state
-const id = x => x;
-const stay = id;
+const stay = identity;
 
-const updatePlayerAndStay = ({ i, name }, state) => {
+const registerPlayerAndStay = ({ i, name }, state) => {
   const invalidName = /^\s*$/.test(name);
-  const players = {
-    ...state.players,
-    [i]: invalidName ? null : { name, station: state.firstStation }
+  return {
+    ...state,
+    registeredPlayers: {
+      ...state.registeredPlayers,
+      [i]: invalidName ? null : name
+    }
   };
-  return { ...state, players };
 };
 
 const goLeftAndStay = withCurrentPlayer(
@@ -152,8 +153,8 @@ const processInput = (state, { input, payload }) => {
   switch (state.tag + input) {
     case BEGIN + SETUP_NEW_GAME:
       return fromBeginToSetupState(state);
-    case SETUP + UPDATE_PLAYER:
-      return updatePlayerAndStay(payload, state);
+    case SETUP + REGISTER_PLAYER:
+      return registerPlayerAndStay(payload, state);
     case SETUP + START:
       return hasEnoughPlayers(state)
         ? fromSetupToTurnState(state)
@@ -261,7 +262,10 @@ class StationRace extends React.Component {
 
     // Utils
     const whenStateIs = tag => state.tag === tag;
-    const whenStateIsNot = tag => !whenStateIs(tag);
+    const whenStateIsNot = pipe(
+      whenStateIs,
+      not
+    );
     const isCurrentPlayer = i => state.currentPlayer === i;
     const sendInput = (input, payload) => {
       const addedState = processInput(state, { input, payload });
@@ -286,7 +290,7 @@ class StationRace extends React.Component {
     const goFirst = () => sendInput(GO_FIRST);
     const goLast = () => sendInput(GO_LAST);
     const updatePlayer = i => e =>
-      sendInput(UPDATE_PLAYER, { i, name: e.target.value });
+      sendInput(REGISTER_PLAYER, { i, name: e.target.value });
 
     return (
       <React.Fragment>
@@ -342,7 +346,11 @@ class StationRace extends React.Component {
               <div key={i} className="editor">
                 <div className="piece" />
                 <input
-                  value={state.players[i] ? state.players[i].name : ""}
+                  value={
+                    state.registeredPlayers[i]
+                      ? state.registeredPlayers[i].name
+                      : ""
+                  }
                   onChange={updatePlayer(i)}
                 />{" "}
               </div>
@@ -511,7 +519,7 @@ class StationRace extends React.Component {
             </ul>
           </React.Fragment>
         )}
-        {/* <pre>{JSON.stringify(state, null, 2)}</pre> */}
+        <pre>{JSON.stringify(state, null, 2)}</pre>
       </React.Fragment>
     );
   }
@@ -523,6 +531,7 @@ ReactDOM.render(
     lastStation={7}
     minPlayers={2}
     maxPlayers={4}
+    makeSecretStation={makeSecretStation}
   />,
   document.getElementById("root")
 );
